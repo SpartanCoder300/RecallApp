@@ -1,6 +1,8 @@
 import Foundation
 
 enum PreviewService {
+    static let libraryItems: [RecallItem] = sampleItems
+
     static let homeSnapshot: HomeScreenSnapshot = {
         let items = sampleItems
         let reviews = sampleReviews

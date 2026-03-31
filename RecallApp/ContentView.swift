@@ -12,7 +12,7 @@ struct ContentView: View {
     @State private var showingQuickAdd = false
     @State private var selectedTab: AppTab = .today
 
-    enum AppTab { case today, collections, settings }
+    enum AppTab { case today, library, collections, settings }
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -20,6 +20,10 @@ struct ContentView: View {
                 HomeScreen()
                     .tabItem { Label("Today", systemImage: "house.fill") }
                     .tag(AppTab.today)
+
+                LibraryScreen()
+                    .tabItem { Label("Library", systemImage: "books.vertical.fill") }
+                    .tag(AppTab.library)
 
                 CollectionsPlaceholder()
                     .tabItem { Label("Collections", systemImage: "square.stack.fill") }
@@ -62,6 +66,13 @@ private struct PreviewContentView: View {
             TabView {
                 HomeScreenPreview(snapshot: PreviewService.homeSnapshot)
                     .tabItem { Label("Today", systemImage: "house.fill") }
+
+                LibraryContent(
+                    items: PreviewService.libraryItems,
+                    searchText: .constant(""),
+                    filter: .constant(.all)
+                )
+                .tabItem { Label("Library", systemImage: "books.vertical.fill") }
 
                 CollectionsPlaceholder()
                     .tabItem { Label("Collections", systemImage: "square.stack.fill") }

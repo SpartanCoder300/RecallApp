@@ -1,0 +1,174 @@
+import SwiftUI
+import SwiftData
+
+struct LibraryScreen: View {
+    @Query(sort: \RecallItem.createdAt, order: .reverse) private var allItems: [RecallItem]
+    @State private var searchText = ""
+    @State private var filter: LibraryFilter = .all
+
+    var body: some View {
+        LibraryContent(
+            items: allItems,
+            searchText: $searchText,
+            filter: $filter
+        )
+    }
+}
+
+enum LibraryFilter: String, CaseIterable, Identifiable {
+    case all = "All"
+    case due = "Due"
+    case mastered = "Mastered"
+    case missed = "Missed"
+
+    var id: String { rawValue }
+}
+
+struct LibraryContent: View {
+    let items: [RecallItem]
+    @Binding var searchText: String
+    @Binding var filter: LibraryFilter
+
+    private var filteredItems: [RecallItem] {
+        let searched = items.filter { item in
+            guard !searchText.isEmpty else { return true }
+            let normalized = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !normalized.isEmpty else { return true }
+
+            let termMatches = item.term.localizedCaseInsensitiveContains(normalized)
+            let noteMatches = item.note?.localizedCaseInsensitiveContains(normalized) == true
+            return termMatches || noteMatches
+        }
+
+        return searched.filter { item in
+            switch filter {
+            case .all:
+                return true
+            case .due:
+                return item.status == .due
+            case .mastered:
+                return item.status == .mastered
+            case .missed:
+                return latestRating(for: item) == .forgot
+            }
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                filterHeader
+
+                Group {
+                    if items.isEmpty {
+                        emptyLibraryState
+                    } else if filteredItems.isEmpty {
+                        emptySearchState
+                    } else {
+                        List {
+                            ForEach(filteredItems) { item in
+                                LibraryRow(item: item)
+                                    .listRowBackground(DT.Color.background)
+                            }
+                        }
+                        .listStyle(.plain)
+                    }
+                }
+            }
+            .navigationTitle("Library")
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always))
+            .background(DT.Color.background)
+        }
+    }
+
+    private var filterHeader: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: DT.Spacing.sm) {
+                ForEach(LibraryFilter.allCases) { chip in
+                    Button(chip.rawValue) {
+                        filter = chip
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(filter == chip ? DT.Color.accent : DT.Color.fillSecondary)
+                    .foregroundStyle(filter == chip ? DT.Color.background : DT.Color.textPrimary)
+                    .accessibilityLabel("Filter by \(chip.rawValue)")
+                }
+            }
+            .padding(.horizontal, DT.Spacing.lg)
+            .padding(.vertical, DT.Spacing.sm)
+        }
+        .background(DT.Color.background)
+    }
+
+    private var emptyLibraryState: some View {
+        ContentUnavailableView {
+            Label("Your library is empty", systemImage: "books.vertical")
+        } description: {
+            Text("Add a few recall items and they’ll appear here.")
+        }
+    }
+
+    private var emptySearchState: some View {
+        ContentUnavailableView {
+            Label("No matching items", systemImage: "magnifyingglass")
+        } description: {
+            Text("Try a different search or change the filter.")
+        }
+    }
+
+    private func latestRating(for item: RecallItem) -> Rating? {
+        (item.reviews ?? [])
+            .max(by: { $0.reviewedAt < $1.reviewedAt })?
+            .rating
+    }
+}
+
+private struct LibraryRow: View {
+    let item: RecallItem
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DT.Spacing.md) {
+            VStack(alignment: .leading, spacing: DT.Spacing.xs) {
+                Text(item.term)
+                    .font(DT.Typography.body)
+                    .fontWeight(.medium)
+                    .foregroundStyle(DT.Color.textPrimary)
+                    .lineLimit(2)
+
+                Text(item.createdAt.formatted(date: .abbreviated, time: .omitted))
+                    .font(DT.Typography.footnote)
+                    .foregroundStyle(DT.Color.textSecondary)
+            }
+
+            Spacer(minLength: DT.Spacing.sm)
+
+            StatusBadge(status: item.status)
+        }
+        .padding(.vertical, DT.Spacing.xs)
+        .contentShape(Rectangle())
+    }
+}
+
+#Preview("Library") {
+    LibraryContent(
+        items: PreviewService.libraryItems,
+        searchText: .constant(""),
+        filter: .constant(.all)
+    )
+}
+
+#Preview("Library Empty") {
+    LibraryContent(
+        items: [],
+        searchText: .constant(""),
+        filter: .constant(.all)
+    )
+}
+
+#Preview("Library Search Empty") {
+    LibraryContent(
+        items: PreviewService.libraryItems,
+        searchText: .constant("zzz"),
+        filter: .constant(.all)
+    )
+}
