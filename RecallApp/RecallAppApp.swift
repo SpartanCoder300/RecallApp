@@ -10,11 +10,15 @@ import SwiftData
 
 @main
 struct RecallAppApp: App {
-    var sharedModelContainer: ModelContainer = {
+    private let sharedModelContainer: ModelContainer = {
         let schema = Schema([RecallItem.self, Review.self, RecallCollection.self])
-        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false, cloudKitDatabase: .automatic)
+        let configuration = ModelConfiguration(
+            schema: schema,
+            cloudKitDatabase: .automatic
+        )
+
         do {
-            return try ModelContainer(for: schema, configurations: [config])
+            return try ModelContainer(for: schema, configurations: [configuration])
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }

@@ -60,17 +60,12 @@ struct StatusBadge: View {
 
 #Preview("With note") {
     List {
-        ItemRow(item: {
-            let i = RecallItem(term: "Hippocampus", note: "Memory consolidation")
-            return i
-        }())
+        ItemRow(item: PreviewService.itemWithNote)
     }
-    .modelContainer(PreviewData.container)
 }
 
 #Preview("No note") {
     List {
-        ItemRow(item: RecallItem(term: "Neuroplasticity"))
+        ItemRow(item: PreviewService.itemWithoutNote)
     }
-    .modelContainer(PreviewData.container)
 }

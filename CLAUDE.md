@@ -21,6 +21,9 @@ All UI work must follow [Apple's Human Interface Guidelines](https://developer.a
 - Use `@Observable` (Swift Observation framework) over `ObservableObject`/`@StateObject` where possible (available iOS 17+, well within target).
 - Prefer `NavigationStack` over `NavigationView`.
 - Use `#Preview` macros for all previews.
+- Do not build previews around SwiftData stores or `.modelContainer(...)` just to show sample content.
+- Previews should inject fixed sample models or snapshot data through preview-specific services/wrapper views.
+- Keep preview data generation separate from runtime persistence/query logic so previews stay stable and deterministic.
 - Keep views small and composable — extract subviews aggressively.
 
 ## General Rules

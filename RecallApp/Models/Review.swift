@@ -3,21 +3,25 @@ import SwiftData
 
 @Model
 final class Review {
-    // CloudKit requires all attributes to be optional or have stored default values.
     var id: UUID = UUID()
     var reviewedAt: Date = Date()
-    var rating: Rating = Rating.forgot
-    /// The text the user typed during recall, if any.
+    /// Stored as a raw String — SwiftData cannot reliably persist custom Codable
+    /// enums as stored properties on device. Access via the `rating` computed property.
+    var ratingValue: String = Rating.forgot.rawValue
     var recalledText: String?
 
-    /// Back-reference to the owning item. Managed by SwiftData via the
-    /// inverse declared on RecallItem.reviews.
     var item: RecallItem?
+
+    /// Typed access to the stored rating value.
+    var rating: Rating {
+        get { Rating(rawValue: ratingValue) ?? .forgot }
+        set { ratingValue = newValue.rawValue }
+    }
 
     init(rating: Rating, recalledText: String? = nil) {
         self.id = UUID()
         self.reviewedAt = Date()
-        self.rating = rating
+        self.ratingValue = rating.rawValue
         self.recalledText = recalledText
     }
 }

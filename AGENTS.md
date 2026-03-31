@@ -57,5 +57,8 @@ Custom controls are only permitted when a native equivalent **cannot** meet the 
 - Use `@Observable` (Swift Observation) over `ObservableObject` / `@StateObject`.
 - Use `NavigationStack` — not `NavigationView`.
 - Use `#Preview` macros for all SwiftUI previews.
+- Previews must not depend on SwiftData stores or `.modelContainer(...)` setup for sample content.
+- Build previews from injected sample models/snapshots via a dedicated preview service or preview wrapper views.
+- Keep runtime data loading and preview data generation separate so previews remain deterministic and do not crash on container initialization.
 - No third-party dependencies without explicit approval.
 - No deprecated APIs.

@@ -3,8 +3,6 @@ import SwiftData
 
 // MARK: - Color palette
 
-/// A fixed set of adaptive system colors for collection labelling.
-/// Stored as a raw String so SwiftData can persist it without custom transformers.
 enum CollectionColor: String, Codable, CaseIterable {
     case blue   = "blue"
     case purple = "purple"
@@ -31,24 +29,27 @@ enum CollectionColor: String, Codable, CaseIterable {
 
 // MARK: - Model
 
-/// A named group of RecallItems. Used to scope review sessions to a topic or context.
-/// Items are never required to belong to a collection — the field is always optional.
 @Model
 final class RecallCollection {
-    // CloudKit requires all attributes to be optional or have stored default values.
     var id: UUID = UUID()
     var name: String = ""
-    var colorValue: CollectionColor = CollectionColor.blue
+    /// Stored as a raw String — SwiftData cannot reliably persist custom Codable
+    /// enums as stored properties on device. Access via the `color` computed property.
+    var colorName: String = CollectionColor.blue.rawValue
     var createdAt: Date = Date()
 
-    /// When a collection is deleted its items are kept — their collection reference is nullified.
     @Relationship(deleteRule: .nullify, inverse: \RecallItem.collection)
-    var items: [RecallItem] = []
+    var items: [RecallItem]?
 
-    init(name: String, color: CollectionColor = CollectionColor.blue) {
+    /// Typed access to the stored color value.
+    var color: CollectionColor {
+        CollectionColor(rawValue: colorName) ?? .blue
+    }
+
+    init(name: String, color: CollectionColor = .blue) {
         self.id = UUID()
         self.name = name
-        self.colorValue = color
+        self.colorName = color.rawValue
         self.createdAt = Date()
     }
 }

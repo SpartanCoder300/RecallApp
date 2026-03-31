@@ -14,9 +14,10 @@ final class RecallItem {
     // .cascade is not supported by CloudKit — SwiftData converts it to .nullify on remote.
     // Deleting a RecallItem must also explicitly delete its reviews in application code.
     @Relationship(deleteRule: .nullify, inverse: \Review.item)
-    var reviews: [Review] = []
+    var reviews: [Review]?
 
     /// The collection this item belongs to. Always optional — items exist independently of collections.
+    @Relationship
     var collection: RecallCollection?
 
     init(term: String, note: String? = nil) {
@@ -28,12 +29,12 @@ final class RecallItem {
 
     // MARK: - Computed
 
-    var reviewCount: Int { reviews.count }
+    var reviewCount: Int { (reviews ?? []).count }
 
     /// The date this item is next due for review.
     /// Items with no reviews return `Date.distantPast` (always due).
     var nextDueDate: Date {
-        let records = reviews.map { ReviewRecord(reviewedAt: $0.reviewedAt, rating: $0.rating) }
+        let records = (reviews ?? []).map { ReviewRecord(reviewedAt: $0.reviewedAt, rating: $0.rating) }
         return SchedulingEngine.nextDueDate(after: records)
     }
 
@@ -47,6 +48,7 @@ final class RecallItem {
 
     /// Human-readable status of this item right now.
     var status: ItemStatus {
+        let reviews = reviews ?? []
         guard !reviews.isEmpty else { return .new }
 
         let sorted = reviews.sorted { $0.reviewedAt < $1.reviewedAt }

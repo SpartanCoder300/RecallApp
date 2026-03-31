@@ -11,7 +11,13 @@ struct QuickAddSheet: View {
     @State private var showingSaveError = false
     @FocusState private var focus: Field?
 
+    private let onSavePreview: ((String, String?) -> Void)?
+
     private enum Field { case term, note }
+
+    init(onSavePreview: ((String, String?) -> Void)? = nil) {
+        self.onSavePreview = onSavePreview
+    }
 
     private var termIsEmpty: Bool {
         term.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -79,6 +85,13 @@ struct QuickAddSheet: View {
             note: trimmedNote.isEmpty ? nil : trimmedNote
         )
 
+        if let onSavePreview {
+            onSavePreview(trimmedTerm, trimmedNote.isEmpty ? nil : trimmedNote)
+            HapticManager.success()
+            dismiss()
+            return
+        }
+
         do {
             try modelContext.transaction {
                 modelContext.insert(item)
@@ -100,16 +113,14 @@ struct QuickAddSheet: View {
 #Preview("Quick Add — Empty") {
     Color.clear
         .sheet(isPresented: .constant(true)) {
-            QuickAddSheet()
+            QuickAddSheet(onSavePreview: { _, _ in })
         }
-        .modelContainer(PreviewData.container)
 }
 
 #Preview("Quick Add — Dark Mode") {
     Color.clear
         .sheet(isPresented: .constant(true)) {
-            QuickAddSheet()
+            QuickAddSheet(onSavePreview: { _, _ in })
         }
-        .modelContainer(PreviewData.container)
         .preferredColorScheme(.dark)
 }
