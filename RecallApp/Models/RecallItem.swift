@@ -35,7 +35,7 @@ final class RecallItem {
     /// Items with no reviews return `Date.distantPast` (always due).
     var nextDueDate: Date {
         let records = (reviews ?? []).map { ReviewRecord(reviewedAt: $0.reviewedAt, rating: $0.rating) }
-        return SchedulingEngine.nextDueDate(after: records)
+        return SchedulingEngine.nextDueDate(after: records, cadence: AppSettings.currentCadence)
     }
 
     /// Whether the item should appear in the current review queue.
