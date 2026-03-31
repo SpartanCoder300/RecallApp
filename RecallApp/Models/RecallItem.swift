@@ -3,14 +3,17 @@ import SwiftData
 
 @Model
 final class RecallItem {
-    var id: UUID
+    // CloudKit requires all attributes to be optional or have stored default values.
+    var id: UUID = UUID()
     /// The term, concept, or question the user wants to memorise.
-    var term: String
+    var term: String = ""
     /// Optional hint shown during recall if the user asks for help.
     var note: String?
-    var createdAt: Date
+    var createdAt: Date = Date()
 
-    @Relationship(deleteRule: .cascade, inverse: \Review.item)
+    // .cascade is not supported by CloudKit — SwiftData converts it to .nullify on remote.
+    // Deleting a RecallItem must also explicitly delete its reviews in application code.
+    @Relationship(deleteRule: .nullify, inverse: \Review.item)
     var reviews: [Review] = []
 
     /// The collection this item belongs to. Always optional — items exist independently of collections.

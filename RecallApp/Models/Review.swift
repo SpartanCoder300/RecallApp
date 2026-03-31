@@ -3,9 +3,10 @@ import SwiftData
 
 @Model
 final class Review {
-    var id: UUID
-    var reviewedAt: Date
-    var rating: Rating
+    // CloudKit requires all attributes to be optional or have stored default values.
+    var id: UUID = UUID()
+    var reviewedAt: Date = Date()
+    var rating: Rating = Rating.forgot
     /// The text the user typed during recall, if any.
     var recalledText: String?
 

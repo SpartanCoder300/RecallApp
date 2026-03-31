@@ -35,16 +35,17 @@ enum CollectionColor: String, Codable, CaseIterable {
 /// Items are never required to belong to a collection — the field is always optional.
 @Model
 final class RecallCollection {
-    var id: UUID
-    var name: String
-    var colorValue: CollectionColor
-    var createdAt: Date
+    // CloudKit requires all attributes to be optional or have stored default values.
+    var id: UUID = UUID()
+    var name: String = ""
+    var colorValue: CollectionColor = CollectionColor.blue
+    var createdAt: Date = Date()
 
     /// When a collection is deleted its items are kept — their collection reference is nullified.
     @Relationship(deleteRule: .nullify, inverse: \RecallItem.collection)
     var items: [RecallItem] = []
 
-    init(name: String, color: CollectionColor = .blue) {
+    init(name: String, color: CollectionColor = CollectionColor.blue) {
         self.id = UUID()
         self.name = name
         self.colorValue = color

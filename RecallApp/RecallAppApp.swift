@@ -12,7 +12,7 @@ import SwiftData
 struct RecallAppApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([RecallItem.self, Review.self, RecallCollection.self])
-        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false, cloudKitDatabase: .automatic)
         do {
             return try ModelContainer(for: schema, configurations: [config])
         } catch {
