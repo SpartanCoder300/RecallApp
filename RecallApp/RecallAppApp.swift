@@ -11,7 +11,7 @@ import SwiftData
 @main
 struct RecallAppApp: App {
     var sharedModelContainer: ModelContainer = {
-        let schema = Schema([RecallItem.self])
+        let schema = Schema([RecallItem.self, Review.self])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
             return try ModelContainer(for: schema, configurations: [config])

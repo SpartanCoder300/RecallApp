@@ -4,12 +4,56 @@ import SwiftData
 @Model
 final class RecallItem {
     var id: UUID
-    var text: String
+    /// The term, concept, or question the user wants to memorise.
+    var term: String
+    /// Optional hint shown during recall if the user asks for help.
+    var note: String?
     var createdAt: Date
 
-    init(text: String) {
+    @Relationship(deleteRule: .cascade, inverse: \Review.item)
+    var reviews: [Review] = []
+
+    init(term: String, note: String? = nil) {
         self.id = UUID()
-        self.text = text
+        self.term = term
+        self.note = note
         self.createdAt = Date()
+    }
+
+    // MARK: - Computed
+
+    var reviewCount: Int { reviews.count }
+
+    /// The date this item is next due for review.
+    /// Items with no reviews return `Date.distantPast` (always due).
+    var nextDueDate: Date {
+        let records = reviews.map { ReviewRecord(reviewedAt: $0.reviewedAt, rating: $0.rating) }
+        return SchedulingEngine.nextDueDate(after: records)
+    }
+
+    /// Whether the item should appear in the current review queue.
+    var isDue: Bool {
+        switch status {
+        case .new, .due: return true
+        case .upcoming, .mastered: return false
+        }
+    }
+
+    /// Human-readable status of this item right now.
+    var status: ItemStatus {
+        guard !reviews.isEmpty else { return .new }
+
+        let sorted = reviews.sorted { $0.reviewedAt < $1.reviewedAt }
+
+        // Mastered: 5+ reviews and the most recent was Easy.
+        if sorted.count >= 5, sorted.last?.rating == .easy {
+            return .mastered
+        }
+
+        let now = Date()
+        if nextDueDate <= now { return .due }
+
+        let days = Calendar.current.dateComponents([.day], from: now, to: nextDueDate).day ?? 1
+        return .upcoming(days: max(1, days))
     }
 }
