@@ -13,6 +13,9 @@ final class RecallItem {
     @Relationship(deleteRule: .cascade, inverse: \Review.item)
     var reviews: [Review] = []
 
+    /// The collection this item belongs to. Always optional — items exist independently of collections.
+    var collection: RecallCollection?
+
     init(term: String, note: String? = nil) {
         self.id = UUID()
         self.term = term

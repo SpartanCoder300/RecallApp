@@ -155,11 +155,23 @@ No user configuration
 
 ### Avoid
 
-* decks
-* folders
-* tags (early)
+* mandatory organisation (every item must belong to something)
+* complex category setup before first use
+* nested folders or hierarchies
 * dashboards
 * gamification
+
+### Collections — the one exception to "no organisation"
+
+Collections are lightweight named groups (e.g. "Interview Prep", "IoT Concepts") that let users scope a review session to a specific context. They are the only organisational layer this app will ever have.
+
+**Hard rules for Collections:**
+* Always optional — items exist and schedule without one
+* Never shown during Quick Add capture — zero friction at the point of capture
+* Assigned after capture, via an edit flow or list action
+* One collection per item (no multi-tagging)
+* Created on demand, not pre-configured on first launch
+* A focused session can filter by collection; the default session sees everything due
 
 ---
 
@@ -193,7 +205,8 @@ No user configuration
 
 ### 1. Too much setup
 
-* decks, categories, fields → kills usage
+* mandatory categories, complex fields → kills usage
+* Collections are permitted but must never appear in the capture flow
 
 ### 2. Feels like school
 
