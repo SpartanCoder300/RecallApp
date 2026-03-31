@@ -22,6 +22,7 @@ enum DT {
         // Accent & semantic
         static let accent:      SwiftUI.Color = .accentColor
         static let destructive: SwiftUI.Color = SwiftUI.Color(UIColor.systemRed)
+        static let caution:     SwiftUI.Color = SwiftUI.Color(UIColor.systemOrange)
         static let success:     SwiftUI.Color = SwiftUI.Color(UIColor.systemGreen)
         static let separator:   SwiftUI.Color = SwiftUI.Color(UIColor.separator)
 

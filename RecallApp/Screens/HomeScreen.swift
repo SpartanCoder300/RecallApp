@@ -4,6 +4,7 @@ import SwiftData
 struct HomeScreen: View {
     @Query(sort: \RecallItem.createdAt, order: .reverse) private var allItems: [RecallItem]
     @Query private var allReviews: [Review]
+    @State private var showingRecallSession = false
 
     var body: some View {
         HomeScreenContent(
@@ -11,8 +12,12 @@ struct HomeScreen: View {
                 allItems: allItems,
                 allReviews: allReviews,
                 now: Date()
-            )
+            ),
+            onBeginReview: { showingRecallSession = true }
         )
+        .fullScreenCover(isPresented: $showingRecallSession) {
+            RecallSessionScreen(items: allItems.filter(\.isDue))
+        }
     }
 }
 
@@ -20,7 +25,7 @@ struct HomeScreenPreview: View {
     let snapshot: HomeScreenSnapshot
 
     var body: some View {
-        HomeScreenContent(snapshot: snapshot)
+        HomeScreenContent(snapshot: snapshot, onBeginReview: { })
     }
 }
 
@@ -77,6 +82,7 @@ struct HomeScreenSnapshot {
 
 private struct HomeScreenContent: View {
     let snapshot: HomeScreenSnapshot
+    let onBeginReview: () -> Void
 
     var body: some View {
         ScrollView {
@@ -84,7 +90,7 @@ private struct HomeScreenContent: View {
                 headerRow
 
                 if snapshot.dueCount > 0 {
-                    ReviewBanner(count: snapshot.dueCount)
+                    ReviewBanner(count: snapshot.dueCount, onBeginReview: onBeginReview)
                 }
 
                 statsRow
@@ -195,6 +201,7 @@ private struct StreakChip: View {
 
 private struct ReviewBanner: View {
     let count: Int
+    let onBeginReview: () -> Void
 
     var body: some View {
         HStack(spacing: DT.Spacing.md) {
@@ -211,9 +218,7 @@ private struct ReviewBanner: View {
 
             Spacer(minLength: DT.Spacing.sm)
 
-            Button("Begin") {
-                // TODO: Navigate to review session screen.
-            }
+            Button("Begin", action: onBeginReview)
             .buttonStyle(.borderedProminent)
             .buttonBorderShape(.capsule)
             .controlSize(.small)
@@ -266,14 +271,14 @@ private struct TodayItemRow: View {
 }
 
 #Preview("With items") {
-    HomeScreenContent(snapshot: PreviewService.homeSnapshot)
+    HomeScreenContent(snapshot: PreviewService.homeSnapshot, onBeginReview: { })
 }
 
 #Preview("Empty state") {
-    HomeScreenContent(snapshot: PreviewService.emptyHomeSnapshot)
+    HomeScreenContent(snapshot: PreviewService.emptyHomeSnapshot, onBeginReview: { })
 }
 
 #Preview("Dark mode") {
-    HomeScreenContent(snapshot: PreviewService.homeSnapshot)
+    HomeScreenContent(snapshot: PreviewService.homeSnapshot, onBeginReview: { })
         .preferredColorScheme(.dark)
 }
