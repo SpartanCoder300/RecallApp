@@ -29,6 +29,29 @@ enum PreviewService {
         RecallItem(term: "Neuroplasticity")
     }()
 
+    static let itemDetail: RecallItem = {
+        let item = RecallItem(
+            term: "Hippocampus",
+            note: "Encodes and consolidates episodic memory."
+        )
+        item.createdAt = Calendar.current.date(byAdding: .day, value: -12, to: Date()) ?? Date()
+
+        let first = Review(rating: .forgot, recalledText: "Struggled to remember the exact role.")
+        first.reviewedAt = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        first.item = item
+
+        let second = Review(rating: .hard, recalledText: "Memory region involved in navigation and encoding.")
+        second.reviewedAt = Calendar.current.date(byAdding: .day, value: -3, to: Date()) ?? Date()
+        second.item = item
+
+        let third = Review(rating: .easy, recalledText: "Critical for forming and consolidating declarative memories.")
+        third.reviewedAt = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+        third.item = item
+
+        item.reviews = [first, second, third]
+        return item
+    }()
+
     private static let sampleItems: [RecallItem] = {
         let todayNew = RecallItem(
             term: "System Design",

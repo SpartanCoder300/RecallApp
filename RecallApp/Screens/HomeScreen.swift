@@ -7,16 +7,19 @@ struct HomeScreen: View {
     @State private var showingRecallSession = false
 
     var body: some View {
-        HomeScreenContent(
-            snapshot: HomeScreenSnapshot.makePreviewSnapshot(
-                allItems: allItems,
-                allReviews: allReviews,
-                now: Date()
-            ),
-            onBeginReview: { showingRecallSession = true }
-        )
-        .fullScreenCover(isPresented: $showingRecallSession) {
-            RecallSessionScreen(items: allItems.filter(\.isDue))
+        NavigationStack {
+            HomeScreenContent(
+                snapshot: HomeScreenSnapshot.makePreviewSnapshot(
+                    allItems: allItems,
+                    allReviews: allReviews,
+                    now: Date()
+                ),
+                onBeginReview: { showingRecallSession = true }
+            )
+            .toolbar(.hidden, for: .navigationBar)
+            .fullScreenCover(isPresented: $showingRecallSession) {
+                RecallSessionScreen(items: allItems.filter(\.isDue))
+            }
         }
     }
 }
@@ -25,7 +28,10 @@ struct HomeScreenPreview: View {
     let snapshot: HomeScreenSnapshot
 
     var body: some View {
-        HomeScreenContent(snapshot: snapshot, onBeginReview: { })
+        NavigationStack {
+            HomeScreenContent(snapshot: snapshot, onBeginReview: { })
+                .toolbar(.hidden, for: .navigationBar)
+        }
     }
 }
 
@@ -152,7 +158,12 @@ private struct HomeScreenContent: View {
 
             VStack(spacing: 0) {
                 ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                    TodayItemRow(item: item)
+                    NavigationLink {
+                        ItemDetailScreen(item: item)
+                    } label: {
+                        TodayItemRow(item: item)
+                    }
+                    .buttonStyle(.plain)
 
                     if index < items.count - 1 {
                         Divider()

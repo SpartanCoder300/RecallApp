@@ -2,16 +2,58 @@ import SwiftUI
 import SwiftData
 
 struct LibraryScreen: View {
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \RecallItem.createdAt, order: .reverse) private var allItems: [RecallItem]
     @State private var searchText = ""
     @State private var filter: LibraryFilter = .all
+    @State private var itemPendingDeletion: RecallItem?
+    @State private var showingDeleteError = false
+    @State private var deleteErrorMessage = ""
 
     var body: some View {
         LibraryContent(
             items: allItems,
             searchText: $searchText,
-            filter: $filter
+            filter: $filter,
+            onDelete: { item in
+                itemPendingDeletion = item
+            }
         )
+        .confirmationDialog(
+            "Delete this item?",
+            isPresented: Binding(
+                get: { itemPendingDeletion != nil },
+                set: { if !$0 { itemPendingDeletion = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete Item", role: .destructive) {
+                deletePendingItem()
+            }
+            Button("Cancel", role: .cancel) {
+                itemPendingDeletion = nil
+            }
+        } message: {
+            Text("This removes the item and all of its review history.")
+        }
+        .alert("Couldn’t Delete Item", isPresented: $showingDeleteError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(deleteErrorMessage)
+        }
+    }
+
+    private func deletePendingItem() {
+        guard let itemPendingDeletion else { return }
+
+        do {
+            try RecallItemDeletionService.delete(itemPendingDeletion, from: modelContext)
+            self.itemPendingDeletion = nil
+        } catch {
+            deleteErrorMessage = error.localizedDescription
+            showingDeleteError = true
+            self.itemPendingDeletion = nil
+        }
     }
 }
 
@@ -28,6 +70,7 @@ struct LibraryContent: View {
     let items: [RecallItem]
     @Binding var searchText: String
     @Binding var filter: LibraryFilter
+    var onDelete: ((RecallItem) -> Void)? = nil
 
     private var filteredItems: [RecallItem] {
         let searched = items.filter { item in
@@ -67,8 +110,17 @@ struct LibraryContent: View {
                     } else {
                         List {
                             ForEach(filteredItems) { item in
-                                LibraryRow(item: item)
-                                    .listRowBackground(DT.Color.background)
+                                NavigationLink {
+                                    ItemDetailScreen(item: item)
+                                } label: {
+                                    LibraryRow(item: item)
+                                }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button("Delete", role: .destructive) {
+                                        onDelete?(item)
+                                    }
+                                }
+                                .listRowBackground(DT.Color.background)
                             }
                         }
                         .listStyle(.plain)
@@ -153,7 +205,8 @@ private struct LibraryRow: View {
     LibraryContent(
         items: PreviewService.libraryItems,
         searchText: .constant(""),
-        filter: .constant(.all)
+        filter: .constant(.all),
+        onDelete: { _ in }
     )
 }
 
@@ -161,7 +214,8 @@ private struct LibraryRow: View {
     LibraryContent(
         items: [],
         searchText: .constant(""),
-        filter: .constant(.all)
+        filter: .constant(.all),
+        onDelete: { _ in }
     )
 }
 
@@ -169,6 +223,7 @@ private struct LibraryRow: View {
     LibraryContent(
         items: PreviewService.libraryItems,
         searchText: .constant("zzz"),
-        filter: .constant(.all)
+        filter: .constant(.all),
+        onDelete: { _ in }
     )
 }
