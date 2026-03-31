@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Daily Recall</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#07090f;
+  --s1:rgba(255,255,255,0.065);
+  --s2:rgba(255,255,255,0.105);
+  --b1:rgba(255,255,255,0.11);
+  --b2:rgba(255,255,255,0.20);
+  --t0:#ffffff;
+  --t1:rgba(255,255,255,0.72);
+  --t2:rgba(255,255,255,0.36);
+  --t3:rgba(255,255,255,0.16);
+  --amber:#f5a623;
+  --ab:rgba(245,166,35,0.14);
+  --ab2:rgba(245,166,35,0.26);
+  --green:#2ed97e;
+  --gb:rgba(46,217,126,0.13);
+  --red:#ff5f5f;
+  --rb:rgba(255,95,95,0.13);
+  --blue:#4ea3ff;
+  --blb:rgba(78,163,255,0.13);
+  --purple:#ac6fff;
+  --pb:rgba(172,111,255,0.13);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",sans-serif;
+  --spring:cubic-bezier(0.34,1.56,0.64,1);
+  --ease:cubic-bezier(0.25,0.46,0.45,0.94);
+  --rmd:18px;--rlg:24px;--rxl:30px;--rpill:999px;
+}
+html,body{min-height:100vh;font-family:var(--font);color:var(--t0);}
+body{
+  display:flex;align-items:center;justify-content:center;
+  background:
+    radial-gradient(ellipse 65% 45% at 12% 6%,rgba(78,163,255,.11) 0%,transparent 55%),
+    radial-gradient(ellipse 55% 38% at 88% 8%,rgba(172,111,255,.09) 0%,transparent 50%),
+    radial-gradient(ellipse 45% 32% at 50% 98%,rgba(46,217,126,.07) 0%,transparent 45%),
+    var(--bg);
+  padding:28px 16px;
+}
+
+/* ── PHONE ── */
+.phone{
+  width:390px;height:844px;
+  background:linear-gradient(170deg,#0d1020 0%,#080b16 100%);
+  border-radius:52px;
+  box-shadow:0 0 0 1px rgba(255,255,255,.095),0 0 0 10px #090b14,0 0 0 11px rgba(255,255,255,.045),0 80px 160px rgba(0,0,0,.85);
+  position:relative;overflow:hidden;display:flex;flex-direction:column;
+}
+.phone::after{content:"";position:absolute;inset:0;border-radius:52px;background:radial-gradient(ellipse 55% 28% at 50% 0%,rgba(78,163,255,.075) 0%,transparent 50%);pointer-events:none;z-index:0;}
+
+/* ── DYNAMIC ISLAND ── */
+.di{position:absolute;top:13px;left:50%;transform:translateX(-50%);width:124px;height:35px;background:#000;border-radius:20px;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 13px;box-shadow:0 2px 10px rgba(0,0,0,.7);}
+.di-cam{width:10px;height:10px;background:#0a0a0a;border-radius:50%;border:1px solid #1e1e1e;}
+.di-s{width:13px;height:7px;background:#0a0a0a;border-radius:5px;border:1px solid #1e1e1e;}
+
+/* ── STATUS BAR ── */
+.sb{height:56px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 10px;flex-shrink:0;z-index:10;position:relative;}
+.sb-t{font-size:15px;font-weight:600;letter-spacing:-.02em;}
+.sb-r{display:flex;align-items:center;gap:6px;}
+.bars{display:flex;gap:2px;align-items:flex-end;height:11px;}
+.bars s{width:3px;border-radius:1px;background:#fff;display:block;}
+.bars s:nth-child(1){height:4px;}.bars s:nth-child(2){height:7px;}.bars s:nth-child(3){height:9px;}.bars s:nth-child(4){height:11px;opacity:.25;}
+.batt{display:flex;align-items:center;}
+.batt-b{width:24px;height:12px;border:1px solid rgba(255,255,255,.38);border-radius:3.5px;padding:1.5px;display:flex;align-items:center;}
+.batt-f{flex:.8;height:100%;background:#fff;border-radius:2px;}
+.batt-n{width:2px;height:5px;background:rgba(255,255,255,.32);border-radius:0 1px 1px 0;flex-shrink:0;}
+
+/* ── SCREENS ── */
+.screens{flex:1;position:relative;overflow:hidden;}
+.scr{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transform:translateX(24px);transition:opacity .3s var(--ease),transform .3s var(--ease);}
+.scr.active{opacity:1;pointer-events:all;transform:none;}
+
+/* ── SCROLL ── */
+.sx{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.sx::-webkit-scrollbar{display:none;}
+.sp{padding:0 18px 148px;}
+
+/* ── GLASS ── */
+.gl{background:var(--s1);border:.5px solid var(--b1);backdrop-filter:blur(32px) saturate(1.8);-webkit-backdrop-filter:blur(32px) saturate(1.8);}
+.gl2{background:var(--s2);border:.5px solid var(--b2);backdrop-filter:blur(40px) saturate(2);-webkit-backdrop-filter:blur(40px) saturate(2);}
+
+/* ── TAB BAR ── */
+.tabs{position:absolute;bottom:22px;left:14px;right:14px;z-index:50;border-radius:28px;padding:7px 4px;display:flex;align-items:center;justify-content:space-around;background:rgba(9,11,20,.82);border:.5px solid rgba(255,255,255,.11);backdrop-filter:blur(48px) saturate(1.9);-webkit-backdrop-filter:blur(48px) saturate(1.9);box-shadow:0 -1px 0 rgba(255,255,255,.04),0 22px 44px rgba(0,0,0,.6);}
+.tab{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 9px;border-radius:20px;cursor:pointer;background:none;border:none;transition:background .18s,transform .14s var(--spring);-webkit-user-select:none;}
+.tab:active{transform:scale(.9);}
+.tab.on{background:rgba(255,255,255,.09);}
+.tab-lbl{font-size:10px;font-weight:600;color:var(--t2);letter-spacing:.02em;transition:color .18s;}
+.tab.on .tab-lbl{color:var(--amber);}
+.tab-ic svg path,.tab-ic svg rect,.tab-ic svg circle{fill:rgba(255,255,255,.3);transition:fill .18s;}
+.tab.on .tab-ic svg path,.tab.on .tab-ic svg rect,.tab.on .tab-ic svg circle{fill:var(--amber);}
+.fab{width:52px;height:52px;border-radius:50%;background:var(--amber);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(245,166,35,.44);transition:transform .18s var(--spring),box-shadow .18s;flex-shrink:0;}
+.fab:active{transform:scale(.90);box-shadow:0 4px 10px rgba(245,166,35,.28);}
+
+/* ── BUTTONS ── */
+.btn{border:none;font-family:var(--font);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:transform .12s var(--spring);-webkit-user-select:none;}
+.btn:active{transform:scale(.96);}
+.b-primary{background:var(--amber);color:#190e00;font-weight:760;font-size:16px;padding:15px;border-radius:var(--rlg);width:100%;}
+.b-green{background:var(--green);color:#001610;font-weight:760;font-size:15px;padding:14px;border-radius:var(--rlg);}
+.b-red{background:var(--red);color:#190000;font-weight:760;font-size:15px;padding:14px;border-radius:var(--rlg);}
+.b-ghost{background:var(--s1);border:.5px solid var(--b1);color:var(--t1);font-size:13px;font-weight:600;padding:9px 13px;border-radius:var(--rmd);}
+
+/* ── BADGES ── */
+.badge{border-radius:var(--rpill);padding:5px 10px;font-size:11px;font-weight:660;white-space:nowrap;flex-shrink:0;}
+.bn{background:var(--ab);color:var(--amber);border:.5px solid var(--ab2);}
+.bd{background:var(--blb);color:var(--blue);border:.5px solid rgba(78,163,255,.28);}
+.bo{background:var(--gb);color:var(--green);border:.5px solid rgba(46,217,126,.28);}
+.bm{background:var(--rb);color:var(--red);border:.5px solid rgba(255,95,95,.28);}
+.bl{background:var(--s1);color:var(--t2);border:.5px solid var(--b1);}
+.bp{background:var(--pb);color:var(--purple);border:.5px solid rgba(172,111,255,.28);}
+
+/* ── LIST ROW ── */
+.row{border-radius:var(--rlg);padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.row-n{font-size:15px;font-weight:500;margin-bottom:3px;}
+.row-m{font-size:12px;color:var(--t2);}
+
+/* ── SECTION HEAD ── */
+.sh{display:flex;align-items:center;justify-content:space-between;margin:18px 0 9px;}
+.sh-t{font-size:17px;font-weight:650;letter-spacing:-.02em;}
+.sh-l{font-size:14px;color:var(--amber);font-weight:500;cursor:pointer;}
+
+/* ── CHIP ── */
+.chip{border-radius:var(--rpill);padding:8px 14px;font-size:13px;font-weight:550;cursor:pointer;transition:background .14s,opacity .14s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.chip:active{opacity:.68;}
+.ca{background:var(--ab);color:var(--amber);border:.5px solid var(--ab2);}
+.cg{background:var(--s1);color:var(--t1);border:.5px solid var(--b1);}
+
+/* ── STREAK ── */
+.streak{display:inline-flex;align-items:center;gap:6px;border-radius:var(--rpill);padding:7px 13px;font-size:13px;font-weight:660;color:var(--amber);background:var(--ab);border:.5px solid var(--ab2);}
+
+/* ── REVIEW BANNER ── */
+.rv-banner{border-radius:var(--rxl);padding:15px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;cursor:pointer;background:rgba(245,166,35,.09);border:.5px solid rgba(245,166,35,.22);transition:background .14s;}
+.rv-banner:active{background:rgba(245,166,35,.15);}
+
+/* ══════════════════════════════════════════
+   RECALL SCREEN
+══════════════════════════════════════════ */
+.rc-hd{padding:12px 18px 0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.rc-back{background:none;border:none;color:var(--t1);font-size:15px;font-weight:500;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:5px;padding:4px 0;}
+.rc-meta{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+.rc-type{font-size:13px;color:var(--amber);font-weight:600;}
+.rc-cnt{font-size:13px;color:var(--t2);}
+.prog-t{height:3px;background:rgba(255,255,255,.07);border-radius:2px;margin:12px 18px 0;flex-shrink:0;overflow:hidden;}
+.prog-f{height:100%;background:linear-gradient(90deg,var(--amber),#ffd06e);border-radius:2px;transition:width .5s var(--ease);}
+.rc-body{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding:16px 18px 20px;}
+.rc-body::-webkit-scrollbar{display:none;}
+
+/* term card */
+.tc{border-radius:var(--rxl);padding:24px;margin-bottom:14px;position:relative;overflow:hidden;}
+.tc::before{content:"";position:absolute;top:-28px;right:-18px;width:130px;height:130px;background:radial-gradient(circle,rgba(245,166,35,.085) 0%,transparent 65%);pointer-events:none;}
+.tc-eye{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--t2);font-weight:660;margin-bottom:14px;}
+.tc-term{font-size:34px;font-weight:760;letter-spacing:-.045em;line-height:1.08;margin-bottom:8px;}
+.tc-info{font-size:13px;color:var(--t2);}
+.tc-reveal{margin-top:15px;padding-top:15px;border-top:.5px solid rgba(255,255,255,.08);}
+.tc-rl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--t2);font-weight:660;margin-bottom:7px;}
+.tc-rt{font-size:15px;color:var(--t1);line-height:1.5;}
+
+/* input area */
+.rc-inp-wrap{border-radius:var(--rxl);padding:18px;margin-bottom:12px;}
+.rc-inp-lbl{font-size:13px;color:var(--t2);font-weight:500;margin-bottom:10px;}
+.rc-ta{width:100%;background:none;border:none;outline:none;font-family:var(--font);font-size:16px;color:var(--t0);resize:none;min-height:88px;line-height:1.5;letter-spacing:-.01em;}
+.rc-ta::placeholder{color:var(--t3);}
+.rc-ta-btns{display:flex;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px;}
+.rc-left-btns{display:flex;gap:7px;}
+
+/* score button */
+.score-area{margin-bottom:14px;}
+.score-btn{width:100%;padding:16px;background:var(--amber);border:none;border-radius:var(--rlg);color:#190e00;font-size:16px;font-weight:760;font-family:var(--font);letter-spacing:-.02em;cursor:pointer;transition:transform .14s var(--spring),opacity .14s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.score-btn:active{transform:scale(.97);}
+.score-btn:disabled{opacity:.28;cursor:default;}
+.selfrate-link{text-align:center;margin-top:10px;}
+.selfrate-link span{font-size:13px;color:var(--t2);cursor:pointer;}
+
+/* AI loading */
+.ai-load{display:none;padding:16px;text-align:center;}
+.ai-dots{display:flex;justify-content:center;gap:6px;margin-bottom:8px;}
+.ai-dots span{width:7px;height:7px;border-radius:50%;background:var(--amber);animation:dot-pulse 1.3s infinite ease-in-out;}
+.ai-dots span:nth-child(2){animation-delay:.2s;}
+.ai-dots span:nth-child(3){animation-delay:.4s;}
+@keyframes dot-pulse{0%,100%{opacity:.2;transform:scale(.7);}50%{opacity:1;transform:scale(1);}}
+.ai-load-txt{font-size:13px;color:var(--t2);font-weight:500;}
+
+/* AI result card */
+.ai-card{border-radius:var(--rxl);padding:18px;margin-bottom:12px;animation:fadeUp .32s var(--ease) both;}
+.ai-hd{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.ai-badge{border-radius:var(--rpill);padding:5px 11px;font-size:12px;font-weight:700;}
+.ai-c{background:var(--gb);color:var(--green);border:.5px solid rgba(46,217,126,.3);}
+.ai-p{background:var(--ab);color:var(--amber);border:.5px solid var(--ab2);}
+.ai-m{background:var(--rb);color:var(--red);border:.5px solid rgba(255,95,95,.3);}
+.ai-txt{font-size:14px;color:var(--t1);line-height:1.55;}
+
+/* 3-way rating */
+.rate-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:8px;animation:fadeUp .28s .05s var(--ease) both;}
+.rate-btn{border-radius:var(--rlg);padding:14px 8px;font-size:14px;font-weight:720;font-family:var(--font);border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;transition:transform .14s var(--spring),box-shadow .18s;}
+.rate-btn:active{transform:scale(.93);}
+.re{background:var(--gb);color:var(--green);border:.5px solid rgba(46,217,126,.28);}
+.rh{background:var(--ab);color:var(--amber);border:.5px solid var(--ab2);}
+.rf{background:var(--rb);color:var(--red);border:.5px solid rgba(255,95,95,.28);}
+.rate-sub{font-size:10px;opacity:.6;font-weight:500;letter-spacing:.02em;}
+
+/* ── COMPLETE ── */
+.cmp-icon{width:76px;height:76px;border-radius:50%;background:var(--gb);border:1.5px solid rgba(46,217,126,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;}
+
+/* ── SHEET ── */
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:300;opacity:0;pointer-events:none;transition:opacity .28s;}
+.overlay.open{opacity:1;pointer-events:all;}
+.sheet{position:absolute;bottom:0;left:0;right:0;z-index:301;background:rgba(10,12,22,.96);border:.5px solid rgba(255,255,255,.13);border-bottom:none;border-radius:30px 30px 0 0;backdrop-filter:blur(52px) saturate(2.2);-webkit-backdrop-filter:blur(52px) saturate(2.2);transform:translateY(100%);transition:transform .42s var(--spring);padding-bottom:44px;}
+.sheet.open{transform:none;}
+.grabber{width:38px;height:4px;background:rgba(255,255,255,.18);border-radius:3px;margin:12px auto 0;}
+.sheet-hd{padding:16px 20px 0;display:flex;align-items:center;justify-content:space-between;}
+.sheet-ttl{font-size:20px;font-weight:720;letter-spacing:-.03em;}
+.sheet-cancel{background:none;border:none;color:var(--t2);font-size:15px;font-weight:500;cursor:pointer;font-family:var(--font);}
+.sheet-chips{display:flex;gap:8px;padding:14px 20px 0;overflow-x:auto;scrollbar-width:none;}
+.sheet-chips::-webkit-scrollbar{display:none;}
+.inp-block{margin:16px 20px 0;border-radius:var(--rxl);background:rgba(255,255,255,.065);border:.5px solid rgba(255,255,255,.11);overflow:hidden;}
+.inp{width:100%;background:none;border:none;outline:none;font-family:var(--font);color:var(--t0);padding:15px 18px;font-size:18px;font-weight:500;letter-spacing:-.02em;}
+.inp::placeholder{color:var(--t3);}
+.inp-div{height:.5px;background:rgba(255,255,255,.07);margin:0 18px;}
+.inp-n{width:100%;background:none;border:none;outline:none;font-family:var(--font);color:var(--t1);padding:12px 18px 16px;font-size:15px;resize:none;min-height:68px;line-height:1.45;}
+.inp-n::placeholder{color:var(--t3);}
+.save-btn{display:block;margin:16px 20px 0;width:calc(100% - 40px);padding:17px;background:var(--amber);border:none;border-radius:var(--rlg);color:#190e00;font-size:17px;font-weight:760;font-family:var(--font);letter-spacing:-.02em;cursor:pointer;transition:transform .14s var(--spring),opacity .14s;}
+.save-btn:active{transform:scale(.98);}
+.save-btn:disabled{opacity:.26;cursor:default;}
+
+/* ── INSIGHTS ── */
+.ins-g{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.ins-c{border-radius:var(--rxl);padding:18px;}
+.ins-l{font-size:11px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;}
+.ins-v{font-size:30px;font-weight:760;letter-spacing:-.045em;}
+.ins-s{font-size:12px;color:var(--t2);margin-top:4px;}
+.heat{display:flex;gap:3px;flex-wrap:wrap;}
+.hd{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:9px;color:rgba(255,255,255,.28);font-weight:600;}
+.h0{background:rgba(255,255,255,.045);}
+.h1{background:rgba(245,166,35,.2);}
+.h2{background:rgba(245,166,35,.42);}
+.h3{background:rgba(245,166,35,.7);}
+
+/* ── SETTINGS ── */
+.stg-row{display:flex;align-items:center;justify-content:space-between;border-radius:var(--rlg);padding:14px 16px;margin-bottom:8px;}
+.stg-lbl{font-size:15px;font-weight:500;}
+.stg-sub{font-size:12px;color:var(--t2);margin-top:2px;}
+.tog{width:50px;height:28px;border-radius:20px;position:relative;cursor:pointer;flex-shrink:0;transition:background .24s;}
+.tog-on{background:var(--green);}
+.tog-off{background:rgba(255,255,255,.12);}
+.tog-k{position:absolute;top:3px;width:22px;height:22px;background:#fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.28);transition:left .24s var(--spring);}
+.tog-on .tog-k{left:25px;}
+.tog-off .tog-k{left:3px;}
+.seg{display:flex;background:rgba(255,255,255,.07);border-radius:13px;padding:3px;gap:2px;}
+.seg-o{flex:1;text-align:center;padding:8px 4px;border-radius:10px;font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;transition:background .18s,color .18s;}
+.seg-o.on{background:rgba(255,255,255,.13);color:var(--t0);}
+.sub-card{border-radius:var(--rxl);padding:18px 20px;margin-top:8px;background:linear-gradient(135deg,rgba(245,166,35,.11),rgba(172,111,255,.09));border:.5px solid rgba(245,166,35,.2);}
+
+/* ── ANIM ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(13px);}to{opacity:1;transform:translateY(0);}}
+@keyframes pop{0%{opacity:0;transform:scale(.82);}55%{transform:scale(1.05);}100%{opacity:1;transform:scale(1);}}
+.afu{animation:fadeUp .35s var(--ease) both;}
+.apo{animation:pop .4s var(--spring) both;}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:40px 16px;color:var(--t3);font-size:15px;line-height:1.6;}
+</style>
+</head>
+<body>
+<canvas id="cc" style="position:fixed;inset:0;pointer-events:none;z-index:9999;width:100%;height:100%;"></canvas>
+
+<div class="phone">
+  <div class="di"><div class="di-cam"></div><div class="di-s"></div></div>
+
+  <!-- STATUS BAR -->
+  <div class="sb">
+    <div class="sb-t">9:41</div>
+    <div class="sb-r">
+      <div class="bars"><s></s><s></s><s></s><s></s></div>
+      <svg width="17" height="12" viewBox="0 0 17 12" fill="none"><path d="M8.5 10a1.3 1.3 0 1 1 0 2.6A1.3 1.3 0 0 1 8.5 10z" fill="white"/><path d="M1 4.5C3.3 2.2 5.75 1 8.5 1s5.2 1.2 7.5 3.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/><path d="M3.2 7C4.9 5.4 6.6 4.6 8.5 4.6S12.1 5.4 13.8 7" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <div class="batt"><div class="batt-b"><div class="batt-f"></div></div><div class="batt-n"></div></div>
+    </div>
+  </div>
+
+  <div class="screens">
+
+    <!-- ════════════════════════ TODAY ════════════════════════ -->
+    <div class="scr active" id="s-today">
+      <div class="sx"><div class="sp">
+
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;padding-top:4px;margin-bottom:16px;">
+          <div>
+            <div style="font-size:13px;color:var(--t2);font-weight:500;margin-bottom:4px;" id="greet">Good morning</div>
+            <div style="font-size:34px;font-weight:760;letter-spacing:-.05em;line-height:1;">Today</div>
+          </div>
+          <div class="streak" id="streak-chip" style="margin-top:6px;cursor:pointer;" onclick="goTo('insights')">
+            <svg width="13" height="16" viewBox="0 0 13 16" fill="var(--amber)"><path d="M6.5 0C4.5 2.4 3 4.5 3 6.8A3.5 3.5 0 0 0 6.5 10.3a3.5 3.5 0 0 0 3.5-3.5C10 4.5 8.5 2.4 6.5 0zm-4 10.2C1 11.8 1 13.5 2.5 15A6 6 0 0 0 6.5 16a6 6 0 0 0 4-1c1.5-1.5 1.5-3.2 0-4.8C9 11.5 7.8 12 6.5 12s-2.5-.5-4-1.8z"/></svg>
+            <span id="streak-n">12</span> day streak
+          </div>
+        </div>
+
+        <!-- review banner -->
+        <div class="rv-banner gl afu" id="rev-banner" onclick="startReview()">
+          <div>
+            <div style="font-size:15px;font-weight:660;color:var(--amber);margin-bottom:2px;">Review session ready</div>
+            <div id="rev-sub" style="font-size:13px;color:rgba(245,166,35,.48);">5 items · tap to begin</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5.5 3L10.5 8L5.5 13" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+
+        <!-- stats -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;" class="afu" style="animation-delay:.06s;">
+          <div class="gl" style="border-radius:var(--rxl);padding:16px;">
+            <div style="font-size:11px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;">Captured</div>
+            <div id="stat-cap" style="font-size:30px;font-weight:760;letter-spacing:-.04em;"></div>
+            <div style="font-size:12px;color:var(--t2);margin-top:3px;">today</div>
+          </div>
+          <div class="gl" style="border-radius:var(--rxl);padding:16px;">
+            <div style="font-size:11px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;">Due now</div>
+            <div id="stat-due" style="font-size:30px;font-weight:760;letter-spacing:-.04em;color:var(--amber);"></div>
+            <div style="font-size:12px;color:var(--t2);margin-top:3px;">to review</div>
+          </div>
+        </div>
+
+        <div class="sh afu" style="animation-delay:.09s;"><div class="sh-t">Added today</div></div>
+        <div id="today-list" style="display:flex;flex-direction:column;gap:8px;" class="afu" style="animation-delay:.12s;"></div>
+
+        <div class="sh afu" style="animation-delay:.15s;">
+          <div class="sh-t">Due from before</div>
+          <div class="sh-l" onclick="goTo('library')">All →</div>
+        </div>
+        <div id="due-list" style="display:flex;flex-direction:column;gap:8px;" class="afu" style="animation-delay:.18s;"></div>
+
+      </div></div>
+      <div class="tabs">
+        <button class="tab on" onclick="goTo('today')"><div class="tab-ic"><svg width="22" height="22" viewBox="0 0 22 22"><rect x="2" y="2" width="8.5" height="8.5" rx="2.5"/><rect x="11.5" y="2" width="8.5" height="8.5" rx="2.5"/><rect x="2" y="11.5" width="8.5" height="8.5" rx="2.5"/><rect x="11.5" y="11.5" width="8.5" height="8.5" rx="2.5"/></svg></div><div class="tab-lbl">Today</div></button>
+        <button class="tab" onclick="goTo('library')"><div class="tab-ic"><svg width="22" height="22" viewBox="0 0 22 22"><rect x="3" y="5" width="16" height="2.5" rx="1.25"/><rect x="3" y="10" width="16" height="2.5" rx="1.25"/><rect x="3" y="15" width="10" height="2.5" rx="1.25"/></svg></div><div class="tab-lbl">Library</div></button>
+        <button class="fab" onclick="openSheet()"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4V18M4 11H18" stroke="#190e00" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+        <button class="tab" onclick="goTo('insights')"><div class="tab-ic"><svg width="22" height="22" viewBox="0 0 22 22"><rect x="3" y="14" width="4" height="5" rx="1.5"/><rect x="9" y="9" width="4" height="10" rx="1.5"/><rect x="15" y="4" width="4" height="15" rx="1.5"/></svg></div><div class="tab-lbl">Insights</div></button>
+        <button class="tab" onclick="goTo('settings')"><div class="tab-ic"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="3" stroke-width="2" stroke="rgba(255,255,255,.3)" fill="none"/><path d="M11 2v2.5M11 17.5V20M2 11h2.5M17.5 11H20M4.6 4.6l1.8 1.8M15.6 15.6l1.8 1.8M4.6 17.4l1.8-1.8M15.6 6.4l1.8-1.8" stroke="rgba(255,255,255,.3)" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg></div><div class="tab-lbl">Settings</div></button>
+      </div>
+    </div>
+
+    <!-- ════════════════════════ RECALL ════════════════════════ -->
+    <div class="scr" id="s-recall">
+      <div class="rc-hd">
+        <button class="rc-back" onclick="goTo('today')">
+          <svg width="9" height="15" viewBox="0 0 9 15" fill="none"><path d="M7.5 1.5L2 7.5L7.5 13.5" stroke="rgba(255,255,255,.7)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Back
+        </button>
+        <div class="rc-meta">
+          <div class="rc-type" id="rc-type">Night Review</div>
+          <div class="rc-cnt" id="rc-cnt">1 of 5</div>
+        </div>
+      </div>
+      <div class="prog-t"><div class="prog-f" id="rc-prog" style="width:0%"></div></div>
+
+      <div class="rc-body" id="rc-body">
+        <!-- TERM CARD -->
+        <div class="tc gl" id="tc">
+          <div class="tc-eye" id="tc-eye">Recall</div>
+          <div class="tc-term" id="tc-term">—</div>
+          <div class="tc-info" id="tc-info"></div>
+          <div class="tc-reveal" id="tc-reveal-wrap" style="display:none;">
+            <div class="tc-rl">Your note</div>
+            <div class="tc-rt" id="tc-reveal-txt"></div>
+          </div>
+        </div>
+
+        <!-- INPUT -->
+        <div class="rc-inp-wrap gl2" id="rc-inp-wrap">
+          <div class="rc-inp-lbl">What do you remember about this?</div>
+          <textarea class="rc-ta" id="rc-ta" placeholder="Type your recall here…" oninput="checkScoreBtn()"></textarea>
+          <div class="rc-ta-btns">
+            <div class="rc-left-btns">
+              <div class="btn b-ghost" onclick="voiceTap(this)">🎤 Voice</div>
+              <div class="btn b-ghost" id="hint-btn" onclick="tapHint()">💡 Hint</div>
+              <div class="btn b-ghost" id="rev-btn" onclick="tapReveal()">👁 Reveal</div>
+            </div>
+            <div class="btn b-ghost" onclick="skipCard()" style="color:var(--t2);">Skip →</div>
+          </div>
+        </div>
+
+        <!-- AI LOADING -->
+        <div class="ai-load" id="ai-load">
+          <div class="ai-dots"><span></span><span></span><span></span></div>
+          <div class="ai-load-txt">AI scoring your recall…</div>
+        </div>
+
+        <!-- AI RESULT -->
+        <div class="ai-card gl" id="ai-card" style="display:none;">
+          <div class="ai-hd">
+            <span style="font-size:17px;">✦</span>
+            <div id="ai-badge" class="ai-badge"></div>
+            <div style="font-size:11px;color:var(--t2);margin-left:auto;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">AI scored</div>
+          </div>
+          <div class="ai-txt" id="ai-txt"></div>
+        </div>
+
+        <!-- SCORE / SELF-RATE BUTTON -->
+        <div class="score-area" id="score-area">
+          <button class="score-btn" id="score-btn" onclick="scoreRecall()">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8a5 5 0 1 1 10 0A5 5 0 0 1 3 8z" stroke="currentColor" stroke-width="1.5"/><path d="M8 5.5v3l2 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Score with AI
+          </button>
+          <div class="selfrate-link">
+            <span onclick="selfRate()">Rate yourself instead →</span>
+          </div>
+        </div>
+
+        <!-- 3-WAY RATING -->
+        <div class="rate-grid" id="rate-grid" style="display:none;">
+          <button class="rate-btn re" onclick="rateCard('easy')">
+            <svg width="17" height="17" viewBox="0 0 17 17" fill="none"><path d="M2 8.5l4 4L15 3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Easy
+            <span class="rate-sub">+7 days</span>
+          </button>
+          <button class="rate-btn rh" onclick="rateCard('hard')">
+            <svg width="17" height="17" viewBox="0 0 17 17" fill="none"><path d="M3.5 13.5L13.5 3.5M8.5 3v6l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Hard
+            <span class="rate-sub">+3 days</span>
+          </button>
+          <button class="rate-btn rf" onclick="rateCard('forgot')">
+            <svg width="17" height="17" viewBox="0 0 17 17" fill="none"><path d="M3.5 3.5l10 10M13.5 3.5l-10 10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            Forgot
+            <span class="rate-sub">+1 day</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ════════════════════════ COMPLETE ════════════════════════ -->
+    <div class="scr" id="s-complete">
+      <div class="sx"><div class="sp">
+        <div style="text-align:center;padding-top:28px;">
+          <div class="cmp-icon apo"><svg width="34" height="34" viewBox="0 0 34 34" fill="none"><path d="M5 17l8 8L29 8" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div style="font-size:26px;font-weight:760;letter-spacing:-.04em;margin-bottom:6px;" id="done-title" class="afu" style="animation-delay:.1s;">Session done</div>
+          <div style="font-size:15px;color:var(--amber);font-weight:600;margin-bottom:4px;" id="done-stats" class="afu" style="animation-delay:.14s;"></div>
+          <div style="font-size:14px;color:var(--t2);margin-bottom:26px;" id="done-pct" class="afu" style="animation-delay:.18s;"></div>
+        </div>
+        <div class="gl" style="border-radius:var(--rxl);padding:6px;margin-bottom:18px;" id="done-list"></div>
+        <button class="btn b-primary" style="border-radius:var(--rlg);" onclick="goTo('today')">Done</button>
+        <div style="text-align:center;margin-top:12px;"><span style="font-size:14px;color:var(--t2);cursor:pointer;" onclick="goTo('insights')">View insights →</span></div>
+      </div></div>
+    </div>
+
+    <!-- ════════════════════════ LIBRARY ════════════════════════ -->
+    <div class="scr" id="s-library">
+      <div style="padding:6px 18px 0;flex-shrink:0;">
+        <div style="font-size:32px;font-weight:760;letter-spacing:-.05em;margin-bottom:10px;">Library</div>
+        <div class="gl" style="border-radius:var(--rlg);padding:11px 16px;display:flex;align-items:center;gap:10px;">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/><path d="M11 11L14 14" stroke="rgba(255,255,255,.28)" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input style="background:none;border:none;outline:none;font-family:var(--font);font-size:16px;color:var(--t0);flex:1;" placeholder="Search…" id="lib-q" oninput="renderLib()"/>
+        </div>
+        <div style="display:flex;gap:8px;padding:10px 0 4px;overflow-x:auto;scrollbar-width:none;" id="lib-filters">
+          <div class="chip ca" data-f="all" onclick="setFilter('all')">All</div>
+          <div class="chip cg" data-f="due" onclick="setFilter('due')">Due</div>
+          <div class="chip cg" data-f="mastered" onclick="setFilter('mastered')">Mastered</div>
+          <div class="chip cg" data-f="missed" onclick="setFilter('missed')">Missed</div>
+        </div>
+      </div>
+      <div class="sx"><div class="sp" style="padding-top:4px;"><div id="lib-list" style="display:flex;flex-direction:column;gap:8px;"></div></div></div>
+      <div class="tabs">
+        <button class="tab" onclick="goTo('today')"><div class="tab-ic"><svg width="22" height="22" viewBox="0 0 22 22"><rect x="2" y="2" width="8.5" height="8.5" rx="2.5"/><rect x="11.5" y="2" width="8.5" height="8.5" rx="2.5"/><rect x="2" y="11.5" width="8.5" height="8.5" rx="2.5"/><rect x="11.5" y="11.5" width="8.5" height="8.5" rx="2.5"/></svg></div><div class="tab-lbl">Today</div></button>
+        <button class="tab on" onclick="goTo('library')"><div class="tab-ic"><svg width="22" height="22" viewBox="0 0 22 22"><rect x="3" y="5" width="16" height="2.5" rx="1.25"/><rect x="3" y="10" width="16" height="2.5" rx="1.25"/><rect x="3" y="15" width="10" height="2.5" rx="1.25"/></svg></div><div class="tab-lbl">Library</div></button>
+        <button class="fab" onclick="openSheet()"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4V18M4 11H18" stroke="#190e00" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+        <button class="tab" onclick="goTo('insights')"><div class="tab-ic"><svg width="22" height="22" viewBox="0 0 22 22"><rect x="3" y="14" width="4" height="5" rx="1.5"/><rect x="9" y="9" width="4" height="10" rx="1.5"/><rect x="15" y="4" width="4" height="15" rx="1.5"/></svg></div><div class="tab-lbl">Insights</div></button>
+        <button class="tab" onclick="goTo('settings')"><div class="tab-ic"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="3" stroke-width="2" stroke="rgba(255,255,255,.3)" fill="none"/><path d="M11 2v2.5M11 17.5V20M2 11h2.5M17.5 11H20M4.6 4.6l1.8 1.8M15.6 15.6l1.8 1.8M4.6 17.4l1.8-1.8M15.6 6.4l1.8-1.8" stroke="rgba(255,255,255,.3)" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg></div><div class="tab-lbl">Settings</div></button>
+      </div>
+    </div>
+
+    <!-- ════════════════════════ INSIGHTS ════════════════════════ -->
+    <div class="scr" id="s-insights">
+      <div class="sx"><div class="sp">
+        <div style="font-size:32px;font-weight:760;letter-spacing:-.05em;margin-bottom:4px;padding-top:4px;">Insights</div>
+        <div style="font-size:14px;color:var(--t2);margin-bottom:18px;">Your memory, tracked</div>
+
+        <div class="ins-g" style="margin-bottom:12px;">
+          <div class="ins-c gl"><div class="ins-l">This week</div><div class="ins-v" id="ins-ret" style="color:var(--green);">—</div><div class="ins-s">retention</div></div>
+          <div class="ins-c gl"><div class="ins-l">Total items</div><div class="ins-v" id="ins-tot">—</div><div class="ins-s">in library</div></div>
+        </div>
+        <div class="ins-g" style="margin-bottom:18px;">
+          <div class="ins-c gl"><div class="ins-l">Mastered</div><div class="ins-v" id="ins-mast" style="color:var(--purple);">—</div><div class="ins-s">items</div></div>
+          <div class="ins-c gl"><div class="ins-l">Streak</div><div class="ins-v" id="ins-streak" style="color:var(--amber);">12</div><div class="ins-s">days</div></div>
+        </div>
+
+        <!-- most missed -->
+        <div class="gl" style="border-radius:var(--rxl);padding:18px;margin-bottom:12px;" id="missed-card">
+          <div style="font-size:15px;font-weight:650;margin-bottom:12px;">Needs work</div>
+          <div id="missed-list"></div>
+        </div>
+
+        <!-- heat map -->
+        <div class="gl" style="border-radius:var(--rxl);padding:18px;margin-bottom:12px;">
+          <div style="font-size:15px;font-weight:650;margin-bottom:12px;">Daily activity — last 21 days</div>
+          <div class="heat" id="heat-map"></div>
+          <div style="display:flex;gap:14px;margin-top:10px;font-size:11px;color:var(--t2);">
+            <div style="display:flex;align-items:center;gap:5px;"><div style="width:11px;height:11px;border-radius:3px;background:rgba(255,255,255,.045);"></div>None</div>
+            <div style="display:flex;align-items:center;gap:5px;"><div style="width:11px;height:11px;border-radius:3px;background:rgba(245,166,35,.42);"></div>Some</div>
+            <div style="display:flex;align-items:center;gap:5px;"><div style="width:11px;height:11px;border-radius:3px;background:rgba(245,166,35,.7);"></div>Active</div>
+          </div>
+        </div>
+
+        <!-- tip -->
+        <div style="border-radius:var(--rxl);padding:18px;background:linear-gradient(135deg,rgba(78,163,255,.10),rgba(172,111,255,.09));border:.5px solid rgba(78,163,255,.2);">
+          <div style="font-size:13px;color:var(--blue);font-weight:660;margin-bottom:6px;">💡 Memory science</div>
+          <div id="ins-tip" style="font-size:14px;color:var(--t1);line-height:1.55;"></div>
+        </div>
+      </div></div>
+      <div class="tabs">
+        <button class="tab" onclick="goTo('today')"><div class="tab-ic"><svg width="22" height="22" viewBox="0 0 22 22"><rect x="2" y="2" width="8.5" height="8.5" rx="2.5"/><rect x="11.5" y="2" width="8.5" height="8.5" rx="2.5"/><rect x="2" y="11.5" width="8.5" height="8.5" rx="2.5"/><rect x="11.5" y="11.5" width="8.5" height="8.5" rx="2.5"/></svg></div><div class="tab-lbl">Today</div></button>
+        <button class="tab" onclick="goTo('library')"><div class="tab-ic"><svg width="22" height="22" viewBox="0 0 22 22"><rect x="3" y="5" width="16" height="2.5" rx="1.25"/><rect x="3" y="10" width="16" height="2.5" rx="1.25"/><rect x="3" y="15" width="10" height="2.5" rx="1.25"/></svg></div><div class="tab-lbl">Library</div></button>
+        <button class="fab" onclick="openSheet()"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4V18M4 11H18" stroke="#190e00" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+        <button class="tab on" onclick="goTo('insights')"><div class="tab-ic"><svg width="22" height="22" viewBox="0 0 22 22"><rect x="3" y="14" width="4" height="5" rx="1.5"/><rect x="9" y="9" width="4" height="10" rx="1.5"/><rect x="15" y="4" width="4" height="15" rx="1.5"/></svg></div><div class="tab-lbl">Insights</div></button>
+        <button class="tab" onclick="goTo('settings')"><div class="tab-ic"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="3" stroke-width="2" stroke="rgba(255,255,255,.3)" fill="none"/><path d="M11 2v2.5M11 17.5V20M2 11h2.5M17.5 11H20M4.6 4.6l1.8 1.8M15.6 15.6l1.8 1.8M4.6 17.4l1.8-1.8M15.6 6.4l1.8-1.8" stroke="rgba(255,255,255,.3)" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg></div><div class="tab-lbl">Settings</div></button>
+      </div>
+    </div>
+
+    <!-- ════════════════════════ SETTINGS ════════════════════════ -->
+    <div class="scr" id="s-settings">
+      <div class="sx"><div class="sp">
+        <div style="font-size:32px;font-weight:760;letter-spacing:-.05em;margin-bottom:18px;padding-top:4px;">Settings</div>
+
+        <div style="font-size:12px;color:var(--t2);font-weight:660;letter-spacing:.09em;text-transform:uppercase;margin-bottom:10px;">Review</div>
+        <div class="stg-row gl">
+          <div><div class="stg-lbl">AI scoring</div><div class="stg-sub">Smart feedback on your recall</div></div>
+          <div class="tog tog-on" id="tog-ai" onclick="toggleSetting('ai')"><div class="tog-k"></div></div>
+        </div>
+        <div class="stg-row gl" style="cursor:pointer;">
+          <div><div class="stg-lbl">Review time reminder</div><div class="stg-sub" id="notif-sub">9:00 PM · Every evening</div></div>
+          <div style="font-size:15px;color:var(--amber);font-weight:600;" id="notif-val" onclick="bumpNotif()">9:00 PM</div>
+        </div>
+        <div class="stg-row gl" style="margin-bottom:8px;"><div><div class="stg-lbl">Review cadence</div><div class="stg-sub">Tonight → 1 week → 1 month</div></div></div>
+        <div class="seg gl" style="margin-bottom:20px;">
+          <div class="seg-o on" onclick="pickSeg(this)">Standard</div>
+          <div class="seg-o" onclick="pickSeg(this)">Relaxed</div>
+          <div class="seg-o" onclick="pickSeg(this)">Aggressive</div>
+        </div>
+
+        <div style="font-size:12px;color:var(--t2);font-weight:660;letter-spacing:.09em;text-transform:uppercase;margin-bottom:10px;">Capture</div>
+        <div class="stg-row gl">
+          <div><div class="stg-lbl">Show hint field</div><div class="stg-sub">Optional note in Quick Add</div></div>
+          <div class="tog tog-on" id="tog-hint" onclick="toggleSetting('hint')"><div class="tog-k"></div></div>
+        </div>
+        <div class="stg-row gl" style="margin-bottom:20px;">
+          <div><div class="stg-lbl">Voice capture</div><div class="stg-sub">Add items by speaking</div></div>
+          <div class="tog tog-off" id="tog-voice" onclick="toggleSetting('voice')"><div class="tog-k"></div></div>
+        </div>
+
+        <div class="sub-card" style="margin-bottom:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div style="font-size:17px;font-weight:720;letter-spacing:-.02em;">Daily Recall Pro</div>
+            <div style="background:var(--ab);color:var(--amber);border:.5px solid var(--ab2);border-radius:var(--rpill);padding:4px 10px;font-size:11px;font-weight:720;letter-spacing:.04em;">ACTIVE</div>
+          </div>
+          <div style="font-size:13px;color:var(--t1);line-height:1.5;margin-bottom:10px;">AI scoring · Voice recall · Unlimited reviews · Smart scheduling · Insights</div>
+          <div style="font-size:12px;color:var(--t2);">$6.99/month · renews Apr 30</div>
+        </div>
+
+        <div style="font-size:12px;color:var(--t2);font-weight:660;letter-spacing:.09em;text-transform:uppercase;margin-bottom:10px;">About</div>
+        <div class="stg-row gl"><div class="stg-lbl">Version</div><div style="font-size:14px;color:var(--t2);">1.0.0 (42)</div></div>
+        <div class="stg-row gl" style="cursor:pointer;"><div class="stg-lbl">Privacy Policy</div><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 2.5L9 7L4 11.5" stroke="rgba(255,255,255,.28)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+      </div></div>
+      <div class="tabs">
+        <button class="tab" onclick="goTo('today')"><div class="tab-ic"><svg width="22" height="22" viewBox="0 0 22 22"><rect x="2" y="2" width="8.5" height="8.5" rx="2.5"/><rect x="11.5" y="2" width="8.5" height="8.5" rx="2.5"/><rect x="2" y="11.5" width="8.5" height="8.5" rx="2.5"/><rect x="11.5" y="11.5" width="8.5" height="8.5" rx="2.5"/></svg></div><div class="tab-lbl">Today</div></button>
+        <button class="tab" onclick="goTo('library')"><div class="tab-ic"><svg width="22" height="22" viewBox="0 0 22 22"><rect x="3" y="5" width="16" height="2.5" rx="1.25"/><rect x="3" y="10" width="16" height="2.5" rx="1.25"/><rect x="3" y="15" width="10" height="2.5" rx="1.25"/></svg></div><div class="tab-lbl">Library</div></button>
+        <button class="fab" onclick="openSheet()"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4V18M4 11H18" stroke="#190e00" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+        <button class="tab" onclick="goTo('insights')"><div class="tab-ic"><svg width="22" height="22" viewBox="0 0 22 22"><rect x="3" y="14" width="4" height="5" rx="1.5"/><rect x="9" y="9" width="4" height="10" rx="1.5"/><rect x="15" y="4" width="4" height="15" rx="1.5"/></svg></div><div class="tab-lbl">Insights</div></button>
+        <button class="tab on" onclick="goTo('settings')"><div class="tab-ic"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="3" stroke-width="2" stroke="rgba(255,255,255,.3)" fill="none"/><path d="M11 2v2.5M11 17.5V20M2 11h2.5M17.5 11H20M4.6 4.6l1.8 1.8M15.6 15.6l1.8 1.8M4.6 17.4l1.8-1.8M15.6 6.4l1.8-1.8" stroke="rgba(255,255,255,.3)" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg></div><div class="tab-lbl">Settings</div></button>
+      </div>
+    </div>
+
+  </div><!-- /screens -->
+
+  <!-- QUICK ADD SHEET -->
+  <div class="overlay" id="overlay" onclick="closeSheet()"></div>
+  <div class="sheet" id="sheet">
+    <div class="grabber"></div>
+    <div class="sheet-hd">
+      <div class="sheet-ttl">Quick Add</div>
+      <button class="sheet-cancel" onclick="closeSheet()">Cancel</button>
+    </div>
+    <div class="sheet-chips">
+      <div class="chip cg" onclick="fill('Hebb\'s rule')">💡 Concept</div>
+      <div class="chip cg" onclick="fill('Idempotency')">🔁 Term</div>
+      <div class="chip cg" onclick="fill('Bloom filter')">🛠 Dev</div>
+      <div class="chip cg" onclick="fill('Working memory')">🧠 Psych</div>
+      <div class="chip cg" onclick="fill('TCP handshake')">🌐 Network</div>
+    </div>
+    <div class="inp-block">
+      <input class="inp" id="inp-t" placeholder="Term or concept…" autocomplete="off" oninput="chkSave()"/>
+      <div class="inp-div"></div>
+      <textarea class="inp-n" id="inp-n" placeholder="Optional note or hint…" rows="2"></textarea>
+    </div>
+    <button class="save-btn" id="save-btn" onclick="saveItem()" disabled>Save to Tonight</button>
+  </div>
+
+</div><!-- /phone -->
+
+<script>
+const DAY = 86400000;
+let libF = 'all';
+let Q = [], QI = 0, results = [];
+let nextId = 20;
+let aiEnabled = true;
+const toggState = {ai:true, hint:true, voice:false};
+
+/* ── AI FEEDBACK DB ── */
+const AIFB = {
+  'Hebbian plasticity':{c:"Correct — synaptic connections strengthen when pre/post-synaptic neurons fire simultaneously. You nailed the mechanism.",p:"You got the neurons firing together part. Add: this specifically increases synaptic weight via AMPA receptor insertion, not just general connectivity.",m:"Neurons that fire together wire together. Synaptic connections strengthen through repeated simultaneous activation — called long-term potentiation."},
+  'Basal ganglia':{c:"Solid — deep subcortical nuclei handling motor control, habit selection, procedural learning, and dopamine reward signaling.",p:"You mentioned motor control. Also key: dopamine-driven reward loops, habit selection (go/no-go decisions), and involvement in procedural memory.",m:"Deep brain nuclei. Core roles: motor control, habit formation, reward processing via dopamine pathways, and procedural learning."},
+  'Cognitive load theory':{c:"Spot on — Sweller's model: working memory is limited. Three loads: intrinsic (task complexity), extraneous (poor design), germane (schema building).",p:"Right that working memory is limited. Sharpen: three distinct load types — intrinsic, extraneous, and germane — each managed differently in instructional design.",m:"Sweller (1988): learning is constrained by limited working memory. Three load types must be managed: intrinsic, extraneous, and germane."},
+  'Bloom filter':{c:"Great — space-efficient probabilistic data structure using k hash functions + bit array. False positives possible, false negatives never.",p:"Got the probabilistic set membership idea. Add the key property: false positives are possible, but it will never return a false negative.",m:"Probabilistic data structure for testing set membership. Uses multiple hash functions on a bit array. Trades accuracy (false positives ok) for huge space savings."},
+  'Idempotency':{c:"Correct — applying an operation multiple times produces the same result as once. Key in APIs: GET, PUT, DELETE are idempotent; POST usually isn't.",p:"Right on repeated-equals-once. Also important: HTTP implications — GET/PUT/DELETE are idempotent, POST is not. Matters for retry logic.",m:"Property where applying an operation multiple times produces the same result as one application. Critical concept in API design and distributed systems."},
+  'Availability heuristic':{c:"Right — judging probability by how easily examples come to mind, causing overestimation of vivid or recent events.",p:"Got the ease-of-recall piece. Sharpen: it specifically biases probability/frequency judgments, not just memorability. Plane crashes feel more likely than they are.",m:"Cognitive shortcut: judging how likely something is by how easily an example comes to mind. Causes overestimation of dramatic but rare events."},
+  'Dunning-Kruger effect':{c:"Correct — low-competence individuals overestimate their ability; highly competent people often underestimate theirs due to more awareness of gaps.",p:"Got the overconfidence direction. Add: it's bidirectional — experts often underestimate their skill relative to novices, not just the other way.",m:"People with limited knowledge overestimate their competence. Conversely, experts often underestimate their skill. Named after 1999 Kruger & Dunning study."}
+};
+
+function aiScore(term, text) {
+  const fb = AIFB[term];
+  const len = text.trim().length;
+  if (len === 0) return {lv:'missed', badge:'Missed ✗', cls:'ai-m', txt: fb?.m || "Nothing recalled. Try writing even a rough definition next time — the attempt is what trains the memory."};
+  if (fb) {
+    if (len > 60) return {lv:'correct', badge:'Correct ✓', cls:'ai-c', txt: fb.c};
+    if (len > 20) return {lv:'partial', badge:'Partial ◐', cls:'ai-p', txt: fb.p};
+    return {lv:'missed', badge:'Missed ✗', cls:'ai-m', txt: fb.m};
+  }
+  if (len > 70) return {lv:'correct', badge:'Correct ✓', cls:'ai-c', txt:"Solid recall. You captured the key elements of this concept with good depth."};
+  if (len > 25) return {lv:'partial', badge:'Partial ◐', cls:'ai-p', txt:"You have the general idea. Try to be more specific about the mechanism or exact definition next time."};
+  return {lv:'missed', badge:'Missed ✗', cls:'ai-m', txt:"Too little to score confidently. Next time write out everything you know — even rough attempts build the retrieval pathway."};
+}
+
+/* ── DATA ── */
+let items = [
+  {id:1,term:"Hebbian plasticity",note:"Neurons that fire together wire together.",added:Date.now()-2*3600000,reviews:[]},
+  {id:2,term:"Basal ganglia",note:"Motor control + reward loops + habit formation.",added:Date.now()-5*3600000,reviews:[]},
+  {id:3,term:"Cognitive load theory",note:"Limited working memory: intrinsic / extraneous / germane load.",added:Date.now()-7*3600000,reviews:[]},
+  {id:4,term:"Bloom filter",note:"Probabilistic set membership. False positives ok, never false negatives.",added:Date.now()-7*DAY,reviews:[{date:Date.now()-7*DAY,rating:'easy',text:'Space-efficient probabilistic structure using hash functions'}]},
+  {id:5,term:"Idempotency",note:"Same operation, same result. GET/PUT/DELETE are idempotent, POST is not.",added:Date.now()-8*DAY,reviews:[{date:Date.now()-8*DAY,rating:'hard',text:'Something about repeated operations giving same result'}]},
+  {id:6,term:"Availability heuristic",note:"Judging probability by ease of recall — vivid events feel more likely.",added:Date.now()-15*DAY,reviews:[{date:Date.now()-15*DAY,rating:'easy',text:'Ease of recall biases frequency estimates'},{date:Date.now()-8*DAY,rating:'easy',text:'Vivid or recent events feel more probable than they are'}]},
+  {id:7,term:"Dunning-Kruger effect",note:"Low competence → high confidence. Experts underestimate their skill.",added:Date.now()-21*DAY,reviews:[{date:Date.now()-21*DAY,rating:'forgot',text:''},{date:Date.now()-14*DAY,rating:'hard',text:'People overestimate skill when they lack competence'}]},
+];
+
+/* ── HELPERS ── */
+function isToday(ts){const n=new Date(),d=new Date(ts);return d.getDate()===n.getDate()&&d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();}
+function daysAgo(ts){return Math.floor((Date.now()-ts)/DAY);}
+function fmtTime(ts){const d=new Date(ts);let h=d.getHours(),m=d.getMinutes(),ap=h>=12?'PM':'AM';if(h>12)h-=12;if(!h)h=12;return `${h}:${String(m).padStart(2,'0')} ${ap}`;}
+function fmtDate(ts){if(isToday(ts))return `Today ${fmtTime(ts)}`;return new Date(ts).toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+
+function nextDue(item){
+  if(!item.reviews.length) return isToday(item.added)?0:-1;
+  const last=item.reviews[item.reviews.length-1];
+  const ago=daysAgo(last.date);
+  const gaps={easy:item.reviews.length===1?7:30,hard:item.reviews.length===1?3:10,forgot:1};
+  return (gaps[last.rating]||7)-ago;
+}
+
+function isDue(item){return nextDue(item)<=0;}
+
+function reviewLabel(item){
+  if(!item.reviews.length) return 'Night Review';
+  if(item.reviews.length===1) return '1-Week Review';
+  return '1-Month Review';
+}
+
+function statusOf(item){
+  if(!item.reviews.length){
+    if(isToday(item.added)) return {l:'New',c:'bn'};
+    return {l:'Missed',c:'bm'};
+  }
+  const last=item.reviews[item.reviews.length-1];
+  if(item.reviews.length>=2&&last.rating==='easy') return {l:'Mastered',c:'bp'};
+  const n=nextDue(item);
+  if(n<=0) return {l:'Due',c:'bd'};
+  if(n===1) return {l:'Tomorrow',c:'bl'};
+  return {l:`In ${n}d`,c:'bl'};
+}
+
+/* ── NAV ── */
+function goTo(name){
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('active'));
+  document.getElementById('s-'+name).classList.add('active');
+  if(name==='today') renderToday();
+  if(name==='library') renderLib();
+  if(name==='insights') renderInsights();
+}
+
+/* ── TODAY ── */
+function renderToday(){
+  const todayList=items.filter(i=>isToday(i.added));
+  const q=items.filter(isDue);
+  const dueOld=items.filter(i=>!isToday(i.added)&&isDue(i));
+
+  document.getElementById('stat-cap').textContent=todayList.length;
+  document.getElementById('stat-due').textContent=q.length;
+  document.getElementById('rev-sub').textContent=`${q.length} item${q.length!==1?'s':''} · tap to begin`;
+  document.getElementById('rev-banner').style.display=q.length?'flex':'none';
+
+  document.getElementById('today-list').innerHTML=todayList.length===0
+    ?'<div class="empty">Tap + to capture your first item today.</div>'
+    :todayList.map(i=>rowH(i,'today')).join('');
+
+  document.getElementById('due-list').innerHTML=dueOld.length===0
+    ?'<div class="empty" style="padding:16px 0">Nothing else due right now.</div>'
+    :dueOld.map(i=>rowH(i,'due')).join('');
+}
+
+function rowH(item,ctx){
+  const s=statusOf(item);
+  const meta=ctx==='today'?`Added ${fmtTime(item.added)}`:`${reviewLabel(item)} · ${daysAgo(item.added)}d ago`;
+  return `<div class="row gl"><div style="flex:1;min-width:0;"><div class="row-n" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.term}</div><div class="row-m">${meta}</div></div><div class="badge ${s.c}">${s.l}</div></div>`;
+}
+
+/* ── RECALL ── */
+function startReview(){
+  Q=items.filter(isDue);
+  if(!Q.length) return;
+  QI=0;results=[];
+  goTo('recall');
+  loadCard();
+}
+
+function loadCard(){
+  const item=Q[QI],tot=Q.length;
+  document.getElementById('rc-type').textContent=reviewLabel(item);
+  document.getElementById('rc-cnt').textContent=`${QI+1} of ${tot}`;
+  document.getElementById('rc-prog').style.width=`${(QI/tot)*100}%`;
+  document.getElementById('tc-term').textContent=item.term;
+  document.getElementById('tc-info').textContent=isToday(item.added)?`Added today · ${fmtTime(item.added)}`:`Added ${daysAgo(item.added)} days ago`;
+  document.getElementById('rc-ta').value='';
+  document.getElementById('tc-reveal-wrap').style.display='none';
+  document.getElementById('ai-load').style.display='none';
+  document.getElementById('ai-card').style.display='none';
+  document.getElementById('score-area').style.display='block';
+  document.getElementById('rate-grid').style.display='none';
+  document.getElementById('rc-inp-wrap').style.display='block';
+  document.getElementById('hint-btn').textContent='💡 Hint';
+  document.getElementById('hint-btn').style.opacity='1';
+  document.getElementById('rev-btn').textContent='👁 Reveal';
+  document.getElementById('score-btn').disabled=false;
+  document.querySelectorAll('.re,.rh,.rf').forEach(b=>b.style.boxShadow='');
+  document.getElementById('rc-body').scrollTop=0;
+  // pop anim
+  const tc=document.getElementById('tc');
+  tc.style.animation='none';tc.offsetHeight;
+  tc.style.animation='pop .4s cubic-bezier(0.34,1.56,0.64,1) both';
+}
+
+function checkScoreBtn(){
+  // score btn always enabled — can score empty to get "nothing recalled"
+}
+
+function tapHint(){
+  const item=Q[QI];
+  if(!item.note){document.getElementById('hint-btn').textContent='No hint';document.getElementById('hint-btn').style.opacity='.38';return;}
+  const words=item.note.split(' ').slice(0,4).join(' ');
+  document.getElementById('hint-btn').textContent=`💡 ${words}…`;
+}
+
+function tapReveal(){
+  const item=Q[QI];
+  const wrap=document.getElementById('tc-reveal-wrap');
+  const btn=document.getElementById('rev-btn');
+  if(wrap.style.display==='none'){
+    document.getElementById('tc-reveal-txt').textContent=item.note||'No note added.';
+    wrap.style.display='block';
+    btn.textContent='👁 Hide';
+  } else {
+    wrap.style.display='none';
+    btn.textContent='👁 Reveal';
+  }
+}
+
+function voiceTap(el){
+  const ta=document.getElementById('rc-ta');
+  ta.placeholder='🎤 Listening…';
+  el.style.opacity='.5';
+  setTimeout(()=>{ta.placeholder='Type your recall here…';el.style.opacity='1';},2000);
+}
+
+function scoreRecall(){
+  const item=Q[QI];
+  const text=document.getElementById('rc-ta').value;
+  document.getElementById('score-area').style.display='none';
+  document.getElementById('rc-inp-wrap').style.pointerEvents='none';
+
+  if(toggState.ai){
+    document.getElementById('ai-load').style.display='block';
+    const delay=1100+Math.random()*600;
+    setTimeout(()=>{
+      document.getElementById('ai-load').style.display='none';
+      const res=aiScore(item.term,text);
+      const badge=document.getElementById('ai-badge');
+      badge.textContent=res.badge;
+      badge.className='ai-badge '+res.cls;
+      document.getElementById('ai-txt').textContent=res.txt;
+      document.getElementById('ai-card').style.display='block';
+      document.getElementById('rate-grid').style.display='grid';
+      // glow suggested button
+      if(res.lv==='correct') document.querySelector('.re').style.boxShadow='0 0 0 1.5px var(--green)';
+      else if(res.lv==='partial') document.querySelector('.rh').style.boxShadow='0 0 0 1.5px var(--amber)';
+      else document.querySelector('.rf').style.boxShadow='0 0 0 1.5px var(--red)';
+      setTimeout(()=>document.getElementById('rc-body').scrollBy({top:200,behavior:'smooth'}),100);
+    },delay);
+  } else {
+    selfRate();
+  }
+}
+
+function selfRate(){
+  document.getElementById('score-area').style.display='none';
+  document.getElementById('ai-load').style.display='none';
+  document.getElementById('rate-grid').style.display='grid';
+  setTimeout(()=>document.getElementById('rc-body').scrollBy({top:200,behavior:'smooth'}),80);
+}
+
+function skipCard(){
+  results.push({term:Q[QI].term,rating:'skip',text:''});
+  advance();
+}
+
+function rateCard(rating){
+  const item=Q[QI];
+  item.reviews.push({date:Date.now(),rating,text:document.getElementById('rc-ta').value});
+  results.push({term:item.term,rating,text:document.getElementById('rc-ta').value});
+  document.getElementById('rc-inp-wrap').style.pointerEvents='';
+  advance();
+}
+
+function advance(){
+  QI++;
+  if(QI>=Q.length) finish();
+  else loadCard();
+}
+
+function finish(){
+  document.getElementById('rc-prog').style.width='100%';
+  const easy=results.filter(r=>r.rating==='easy').length;
+  const hard=results.filter(r=>r.rating==='hard').length;
+  const forgot=results.filter(r=>r.rating==='forgot').length;
+  const skip=results.filter(r=>r.rating==='skip').length;
+  const scored=results.length-skip;
+  const pct=scored>0?Math.round((easy+hard*.5)/scored*100):0;
+  const allGood=pct===100&&scored>0&&skip===0;
+  document.getElementById('done-title').textContent=allGood?'Perfect session! 🎉':pct>=70?'Great session 🙌':'Session done';
+  document.getElementById('done-stats').textContent=`${easy} easy · ${hard} hard · ${forgot} forgot${skip?` · ${skip} skipped`:''}`;
+  document.getElementById('done-pct').textContent=scored>0?`${pct}% retention · ${results.length} items`:`${results.length} items skipped`;
+  const icon={easy:'✓',hard:'~',forgot:'✗',skip:'→'};
+  const col={easy:'var(--green)',hard:'var(--amber)',forgot:'var(--red)',skip:'var(--t2)'};
+  document.getElementById('done-list').innerHTML=results.map(r=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 15px;">
+      <div>
+        <div style="font-size:15px;font-weight:500;">${r.term}</div>
+        ${r.text?`<div style="font-size:12px;color:var(--t2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:240px;">${r.text.substring(0,40)}${r.text.length>40?'…':''}</div>`:''}
+      </div>
+      <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:760;color:${col[r.rating]};flex-shrink:0;">${icon[r.rating]}</div>
+    </div>`).join('');
+  setTimeout(()=>{goTo('complete');if(allGood) confetti();},320);
+}
+
+/* ── QUICK ADD ── */
+function openSheet(){
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('inp-t').focus(),420);
+}
+function closeSheet(){
+  document.getElementById('sheet').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('inp-t').value='';
+  document.getElementById('inp-n').value='';
+  document.getElementById('save-btn').disabled=true;
+}
+function chkSave(){document.getElementById('save-btn').disabled=!document.getElementById('inp-t').value.trim();}
+function fill(t){document.getElementById('inp-t').value=t;chkSave();document.getElementById('inp-t').focus();}
+function saveItem(){
+  const term=document.getElementById('inp-t').value.trim();
+  if(!term) return;
+  items.unshift({id:nextId++,term,note:document.getElementById('inp-n').value.trim(),added:Date.now(),reviews:[]});
+  closeSheet();
+  goTo('today');
+  setTimeout(()=>{const f=document.querySelector('#today-list .row');if(f){f.style.animation='none';f.offsetHeight;f.style.animation='pop .38s cubic-bezier(0.34,1.56,0.64,1) both';}},60);
+}
+document.getElementById('inp-t').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();if(!document.getElementById('save-btn').disabled)saveItem();}});
+
+/* ── LIBRARY ── */
+function setFilter(f){
+  libF=f;
+  document.querySelectorAll('#lib-filters .chip').forEach(c=>{
+    c.className='chip '+(c.getAttribute('data-f')===f?'ca':'cg');
+  });
+  renderLib();
+}
+function renderLib(){
+  const q=(document.getElementById('lib-q').value||'').toLowerCase();
+  let list=[...items].sort((a,b)=>b.added-a.added);
+  if(q) list=list.filter(i=>i.term.toLowerCase().includes(q)||(i.note||'').toLowerCase().includes(q));
+  if(libF==='due') list=list.filter(isDue);
+  if(libF==='mastered') list=list.filter(i=>statusOf(i).l==='Mastered');
+  if(libF==='missed') list=list.filter(i=>statusOf(i).l==='Missed');
+  const el=document.getElementById('lib-list');
+  if(!list.length){el.innerHTML='<div class="empty">Nothing found.</div>';return;}
+  el.innerHTML=list.map(i=>{
+    const s=statusOf(i);
+    return `<div class="row gl"><div style="flex:1;min-width:0;"><div class="row-n" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${i.term}</div><div class="row-m">${fmtDate(i.added)} · ${i.reviews.length} review${i.reviews.length!==1?'s':''}</div></div><div class="badge ${s.c}">${s.l}</div></div>`;
+  }).join('');
+}
+
+/* ── INSIGHTS ── */
+const TIPS = [
+  "Reviewing items the same evening you learn them strengthens memory by up to 40% versus waiting days later.",
+  "Active recall — writing what you remember — is 50–80% more effective than rereading notes, according to Roediger & Karpicke (2006).",
+  "The spacing effect: spreading reviews over time (days → weeks → months) produces far more durable memory than cramming.",
+  "Generating an answer, even an incorrect one, dramatically improves subsequent learning. The attempt matters.",
+  "Testing yourself predicts exam performance better than time spent studying. Retrieval practice is the mechanism."
+];
+function renderInsights(){
+  document.getElementById('ins-tot').textContent=items.length;
+  document.getElementById('ins-mast').textContent=items.filter(i=>statusOf(i).l==='Mastered').length;
+  // retention last 7 days
+  const recentRevs=items.flatMap(i=>i.reviews.filter(r=>daysAgo(r.date)<=7));
+  const goodRevs=recentRevs.filter(r=>r.rating==='easy'||r.rating==='hard');
+  const ret=recentRevs.length>0?Math.round((goodRevs.length/recentRevs.length)*100):0;
+  document.getElementById('ins-ret').textContent=recentRevs.length>0?ret+'%':'—';
+  // missed items
+  const missed=items.filter(i=>{const s=statusOf(i);return s.l==='Missed'||i.reviews.some(r=>r.rating==='forgot');});
+  const mc=document.getElementById('missed-list');
+  mc.innerHTML=missed.length===0?'<div style="font-size:14px;color:var(--t2);">Nothing — you\'re on top of it all 🎉</div>':missed.slice(0,3).map(i=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:.5px solid rgba(255,255,255,.06);"><span style="font-size:15px;font-weight:500;">${i.term}</span><div class="badge bm" style="font-size:10px;">Review</div></div>`).join('');
+  // heat map
+  const hm=document.getElementById('heat-map');
+  hm.innerHTML=Array.from({length:21},(_,i)=>{
+    const d=new Date(Date.now()-(20-i)*DAY);
+    const cnt=items.reduce((n,item)=>n+item.reviews.filter(r=>{const rd=new Date(r.date);return rd.getDate()===d.getDate()&&rd.getMonth()===d.getMonth()&&rd.getFullYear()===d.getFullYear();}).length,0);
+    const cl=cnt===0?'h0':cnt<=2?'h1':cnt<=5?'h2':'h3';
+    return `<div class="hd ${cl}">${d.getDate()}</div>`;
+  }).join('');
+  document.getElementById('ins-tip').textContent=TIPS[Math.floor(Math.random()*TIPS.length)];
+}
+
+/* ── SETTINGS ── */
+function toggleSetting(k){
+  toggState[k]=!toggState[k];
+  const el=document.getElementById('tog-'+k);
+  if(el){el.className='tog '+(toggState[k]?'tog-on':'tog-off');}
+  if(k==='ai') aiEnabled=toggState[k];
+}
+function pickSeg(el){document.querySelectorAll('.seg-o').forEach(o=>o.classList.remove('on'));el.classList.add('on');}
+const NTIMES=['7:00 PM','7:30 PM','8:00 PM','8:30 PM','9:00 PM','9:30 PM','10:00 PM'];
+let ni=4;
+function bumpNotif(){
+  ni=(ni+1)%NTIMES.length;
+  document.getElementById('notif-val').textContent=NTIMES[ni];
+  document.getElementById('notif-sub').textContent=NTIMES[ni]+' · Every evening';
+}
+
+/* ── CONFETTI ── */
+function confetti(){
+  const c=document.getElementById('cc'),ctx=c.getContext('2d');
+  c.width=window.innerWidth;c.height=window.innerHeight;
+  const cols=['#f5a623','#2ed97e','#4ea3ff','#ff5f5f','#fff','#ffd06e','#ac6fff'];
+  const ps=Array.from({length:110},()=>({
+    x:Math.random()*c.width,y:-20-Math.random()*100,
+    w:5+Math.random()*7,h:2+Math.random()*4,
+    r:Math.random()*Math.PI*2,vx:(Math.random()-.5)*5,vy:2+Math.random()*4,
+    vr:(Math.random()-.5)*.18,col:cols[Math.floor(Math.random()*cols.length)],op:1
+  }));
+  let f=0;
+  (function loop(){
+    ctx.clearRect(0,0,c.width,c.height);
+    ps.forEach(p=>{
+      p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;p.vy+=.09;p.op=Math.max(0,1-f/105);
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.globalAlpha=p.op;ctx.fillStyle=p.col;
+      ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();
+    });
+    if(++f<130) requestAnimationFrame(loop);
+    else ctx.clearRect(0,0,c.width,c.height);
+  })();
+}
+
+/* ── INIT ── */
+function greet(){const h=new Date().getHours();document.getElementById('greet').textContent=h<12?'Good morning':h<17?'Good afternoon':'Good evening';}
+greet();
+renderToday();
+</script>
+</body>
+</html>
