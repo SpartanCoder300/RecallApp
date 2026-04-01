@@ -7,6 +7,7 @@ struct RecallSessionScreen: View {
 
     let items: [RecallItem]
     private let onRatePreview: ((RecallItem, Rating, String?) -> Void)?
+    private let previewConfiguration: RecallSessionPreviewConfiguration?
 
     @State private var queue: [RecallItem] = []
     @State private var completedCount = 0
@@ -18,13 +19,25 @@ struct RecallSessionScreen: View {
     @State private var showingSaveError = false
     @State private var showingExitConfirmation = false
     @FocusState private var recallFieldFocused: Bool
+    @AppStorage(AppSettings.isProUserKey) private var isProUser = false
+    @AppStorage(AppSettings.aiGradingEnabledKey) private var aiGradingEnabled = true
+    @State private var gradingState: GradingState = .idle
 
     init(
         items: [RecallItem],
-        onRatePreview: ((RecallItem, Rating, String?) -> Void)? = nil
+        onRatePreview: ((RecallItem, Rating, String?) -> Void)? = nil,
+        previewConfiguration: RecallSessionPreviewConfiguration? = nil
     ) {
         self.items = items
         self.onRatePreview = onRatePreview
+        self.previewConfiguration = previewConfiguration
+        _queue = State(initialValue: previewConfiguration?.queue ?? [])
+        _completedCount = State(initialValue: previewConfiguration?.completedCount ?? 0)
+        _results = State(initialValue: previewConfiguration?.results ?? [])
+        _recalledText = State(initialValue: previewConfiguration?.recalledText ?? "")
+        _revealedNote = State(initialValue: previewConfiguration?.revealedNote)
+        _hintText = State(initialValue: previewConfiguration?.hintText)
+        _gradingState = State(initialValue: previewConfiguration?.gradingState ?? .idle)
     }
 
     private var currentItem: RecallItem? {
@@ -46,10 +59,34 @@ struct RecallSessionScreen: View {
         revealedNote != nil
     }
 
+    private var shouldUseAIGrading: Bool {
+        isProUser && aiGradingEnabled
+    }
+
+    private var hasTypedRecall: Bool {
+        !recalledText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var isGradingInProgress: Bool {
+        if case .loading = gradingState { return true }
+        return false
+    }
+
+    private var currentGradingResult: GradingResult? {
+        if case .result(let r) = gradingState { return r }
+        return nil
+    }
+
+    private var shouldShowCheckButton: Bool {
+        if case .loading = gradingState { return true }
+        if case .idle = gradingState { return shouldUseAIGrading && hasTypedRecall }
+        return false
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
-                DT.Color.background.ignoresSafeArea()
+                DT.Color.background.ignoresSafeArea(.container)
 
                 if let currentItem {
                     VStack(spacing: DT.Spacing.sm) {
@@ -65,7 +102,8 @@ struct RecallSessionScreen: View {
                             onHint: revealHint,
                             onReveal: revealNote,
                             onSkip: skipCurrentItem,
-                            showsRatings: hasAttemptedRecall
+                            showsRatings: hasAttemptedRecall,
+                            gradingResult: currentGradingResult
                         )
                         .id(currentItem.id)
                         .transition(
@@ -80,7 +118,13 @@ struct RecallSessionScreen: View {
                     .padding(.top, DT.Spacing.md)
                     .padding(.bottom, DT.Spacing.lg)
                     .safeAreaInset(edge: .bottom) {
-                        if hasAttemptedRecall {
+                        if case .result(let result) = gradingState {
+                            AIGradingSuggestionView(result: result, onRate: rateCurrentItem)
+                        } else if shouldShowCheckButton {
+                            checkAnswerBar
+                        } else if case .failed = gradingState {
+                            failedGradingBar
+                        } else if hasAttemptedRecall {
                             ratingBar
                         }
                     }
@@ -139,11 +183,13 @@ struct RecallSessionScreen: View {
             Text("You’ll lose your progress in this recall session.")
         }
         .onAppear {
-            if queue.isEmpty {
+            if queue.isEmpty, previewConfiguration == nil {
                 queue = items
             }
-            DispatchQueue.main.async {
-                recallFieldFocused = true
+            if previewConfiguration?.focusRecallField == true || previewConfiguration == nil {
+                DispatchQueue.main.async {
+                    recallFieldFocused = true
+                }
             }
         }
     }
@@ -192,6 +238,49 @@ struct RecallSessionScreen: View {
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
+    private var checkAnswerBar: some View {
+        Button {
+            Task { await runAIGrading() }
+        } label: {
+            Group {
+                if isGradingInProgress {
+                    HStack(spacing: DT.Spacing.sm) {
+                        ProgressView().tint(.white)
+                        Text("Grading…")
+                    }
+                } else {
+                    Label("Check Answer", systemImage: "sparkles")
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .fontWeight(.semibold)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .disabled(isGradingInProgress)
+        .padding(.horizontal, DT.Spacing.lg)
+        .padding(.top, DT.Spacing.sm)
+        .padding(.bottom, DT.Spacing.sm)
+        .background(DT.Color.background)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .accessibilityLabel(isGradingInProgress ? "Grading in progress" : "Check answer with AI")
+    }
+
+    private var failedGradingBar: some View {
+        VStack(spacing: 0) {
+            Text("AI grading unavailable — rate yourself")
+                .font(DT.Typography.caption)
+                .foregroundStyle(DT.Color.textSecondary)
+                .padding(.top, DT.Spacing.sm)
+                .padding(.horizontal, DT.Spacing.lg)
+                .frame(maxWidth: .infinity)
+                .background(DT.Color.background)
+                .accessibilityLabel("AI grading unavailable, please rate yourself manually")
+            ratingBar
+        }
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+
     private func revealHint() {
         guard let note = currentItem?.note?.trimmingCharacters(in: .whitespacesAndNewlines), !note.isEmpty else {
             hintText = "No hint available."
@@ -226,6 +315,10 @@ struct RecallSessionScreen: View {
             recalledText: trimmedRecall.isEmpty ? nil : trimmedRecall
         )
         review.item = currentItem
+        if case .result(let gradingResult) = gradingState {
+            review.gradingReasoning = gradingResult.reasoning
+            review.wasAIGraded = true
+        }
 
         if let onRatePreview {
             onRatePreview(currentItem, rating, trimmedRecall.isEmpty ? nil : trimmedRecall)
@@ -270,8 +363,28 @@ struct RecallSessionScreen: View {
         recalledText = ""
         revealedNote = nil
         hintText = nil
+        gradingState = .idle
         DispatchQueue.main.async {
             recallFieldFocused = true
+        }
+    }
+
+    private func runAIGrading() async {
+        guard let currentItem else { return }
+        recallFieldFocused = false
+        withAnimation { gradingState = .loading }
+
+        do {
+            let result = try await AnswerGradingService.grade(
+                recalledText: recalledText,
+                term: currentItem.term,
+                note: currentItem.note
+            )
+            withAnimation { gradingState = .result(result) }
+            HapticManager.soft()
+        } catch {
+            // Model unavailable or unexpected response — fall back to manual rating bar
+            withAnimation { gradingState = .failed }
         }
     }
 
@@ -284,7 +397,14 @@ struct RecallSessionScreen: View {
     }
 }
 
-private struct SessionResult: Identifiable {
+enum GradingState {
+    case idle
+    case loading
+    case result(GradingResult)
+    case failed
+}
+
+struct SessionResult: Identifiable {
     let item: RecallItem
     let rating: Rating
 
@@ -302,6 +422,7 @@ private struct RecallCardView: View {
     let onReveal: () -> Void
     let onSkip: () -> Void
     let showsRatings: Bool
+    let gradingResult: GradingResult?
 
     var body: some View {
         ScrollView {
@@ -314,43 +435,71 @@ private struct RecallCardView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.top, DT.Spacing.lg)
 
-                RecallComposer(
-                    text: $recalledText,
-                    isFocused: $recallFieldFocused
-                )
+                if let gradingResult {
+                    yourAnswerCard(text: recalledText)
+                        .transition(.opacity)
+                        .padding(.bottom, DT.Spacing.xs)
+                    AIReasoningCard(result: gradingResult)
+                        .transition(.opacity)
+                } else {
+                    RecallComposer(
+                        text: $recalledText,
+                        isFocused: $recallFieldFocused
+                    )
                     .accessibilityLabel("Recall response")
+                    .transition(.opacity)
 
-                if let hintText {
-                    disclosureCard(title: "Hint", text: hintText)
+                    if let hintText {
+                        disclosureCard(title: "Hint", text: hintText)
+                    }
+
+                    if let revealedNote {
+                        disclosureCard(title: "Answer", text: revealedNote)
+                    }
+
+                    HStack(spacing: DT.Spacing.sm) {
+                        Button("Hint", action: onHint)
+                            .buttonStyle(.bordered)
+                            .controlSize(.regular)
+                            .accessibilityLabel("Show hint")
+
+                        Button("Answer", action: onReveal)
+                            .buttonStyle(.bordered)
+                            .controlSize(.regular)
+                            .accessibilityLabel("Show answer")
+
+                        Button("Skip", action: onSkip)
+                            .buttonStyle(.bordered)
+                            .controlSize(.regular)
+                            .disabled(!canSkip)
+                            .accessibilityLabel("Skip card")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .transition(.opacity)
                 }
-
-                if let revealedNote {
-                    disclosureCard(title: "Answer", text: revealedNote)
-                }
-
-                HStack(spacing: DT.Spacing.sm) {
-                    Button("Hint", action: onHint)
-                        .buttonStyle(.bordered)
-                        .controlSize(.regular)
-                        .accessibilityLabel("Show hint")
-
-                    Button("Answer", action: onReveal)
-                        .buttonStyle(.bordered)
-                        .controlSize(.regular)
-                        .accessibilityLabel("Show answer")
-
-                    Button("Skip", action: onSkip)
-                        .buttonStyle(.bordered)
-                        .controlSize(.regular)
-                        .disabled(!canSkip)
-                        .accessibilityLabel("Skip card")
-                }
-                .frame(maxWidth: .infinity)
 
                 Color.clear.frame(height: showsRatings ? 88 : 0)
             }
         }
         .scrollDismissesKeyboard(.interactively)
+    }
+
+    private func yourAnswerCard(text: String) -> some View {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return VStack(alignment: .leading, spacing: DT.Spacing.xs) {
+            Text("Your Answer")
+                .font(DT.Typography.caption)
+                .foregroundStyle(DT.Color.textSecondary)
+            Text(trimmed.isEmpty ? "No answer entered" : trimmed)
+                .font(DT.Typography.body)
+                .foregroundStyle(trimmed.isEmpty ? DT.Color.textTertiary : DT.Color.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DT.Spacing.md)
+        .background(DT.Color.surfaceElevated, in: RoundedRectangle(cornerRadius: DT.Radius.lg))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Your answer: \(trimmed.isEmpty ? "none" : trimmed)")
     }
 
     private func disclosureCard(title: String, text: String) -> some View {
@@ -399,7 +548,7 @@ private struct RecallComposer: View {
     }
 }
 
-private struct SessionCompleteView: View {
+struct SessionCompleteView: View {
     let results: [SessionResult]
     let onDone: () -> Void
 
@@ -586,19 +735,160 @@ private struct CelebrationBurstView: View {
     }
 }
 
-#Preview("Recall Session") {
-    RecallSessionScreen(items: [
-        PreviewService.itemWithNote,
-        PreviewService.itemWithoutNote
-    ], onRatePreview: { _, _, _ in })
+struct AIReasoningCard: View {
+    let result: GradingResult
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DT.Spacing.md) {
+            HStack(spacing: DT.Spacing.sm) {
+                Label("AI Grading", systemImage: "sparkles")
+                    .font(DT.Typography.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(DT.Color.accent)
+
+                Spacer(minLength: DT.Spacing.sm)
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("Suggested rating")
+                        .font(DT.Typography.caption)
+                        .foregroundStyle(DT.Color.textSecondary)
+
+                    Text(result.suggestedRating.rawValue)
+                        .font(DT.Typography.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(ratingTint)
+                        .padding(.horizontal, DT.Spacing.sm)
+                        .padding(.vertical, DT.Spacing.xs)
+                        .background(ratingTint.opacity(0.14), in: Capsule())
+                        .accessibilityHidden(true)
+                }
+            }
+
+            Text(result.reasoning)
+                .font(DT.Typography.callout)
+                .foregroundStyle(DT.Color.textPrimary)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(DT.Spacing.md)
+        .background(DT.Color.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: DT.Radius.lg))
+        .overlay {
+            RoundedRectangle(cornerRadius: DT.Radius.lg)
+                .stroke(DT.Color.accent.opacity(0.3), lineWidth: 1)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("AI grading suggested \(result.suggestedRating.rawValue). \(result.reasoning)")
+    }
+
+    private var ratingTint: Color {
+        switch result.suggestedRating {
+        case .forgot:
+            DT.Color.destructive
+        case .hard:
+            DT.Color.caution
+        case .easy:
+            DT.Color.accent
+        }
+    }
 }
 
-#Preview("Session Complete") {
-    SessionCompleteView(
-        results: [
-            SessionResult(item: PreviewService.itemWithNote, rating: .easy),
-            SessionResult(item: PreviewService.itemWithoutNote, rating: .hard)
-        ],
-        onDone: { }
+struct AIGradingSuggestionView: View {
+    let result: GradingResult
+    let onRate: (Rating) -> Void
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: DT.Spacing.sm) {
+            ratingButton(.forgot, label: "Forgot", tint: DT.Color.destructive)
+            ratingButton(.hard,   label: "Hard",   tint: DT.Color.caution)
+            ratingButton(.easy,   label: "Easy",   tint: DT.Color.accent)
+        }
+        .padding(.horizontal, DT.Spacing.lg)
+        .padding(.top, DT.Spacing.sm)
+        .padding(.bottom, DT.Spacing.sm)
+        .background(DT.Color.background)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+
+    @ViewBuilder
+    private func ratingButton(_ rating: Rating, label: String, tint: Color) -> some View {
+        let isSuggested = rating == result.suggestedRating
+        if isSuggested {
+            Button { onRate(rating) } label: {
+                Label(label, systemImage: "sparkles")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.roundedRectangle(radius: DT.Radius.md))
+            .tint(tint.opacity(0.82))
+            .controlSize(.large)
+            .frame(maxWidth: .infinity)
+            .overlay {
+                RoundedRectangle(cornerRadius: DT.Radius.md)
+                    .stroke(tint.opacity(0.42), lineWidth: 1.5)
+            }
+            .accessibilityLabel("\(label), AI suggested")
+        } else {
+            Button(label) { onRate(rating) }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.roundedRectangle(radius: DT.Radius.md))
+                .tint(tint.opacity(0.82))
+                .controlSize(.large)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel("Override to \(label.lowercased())")
+        }
+    }
+}
+
+#Preview("Recall Session Light") {
+    RecallSessionScreen(
+        items: RecallSessionPreviewService.sessionItems,
+        onRatePreview: { _, _, _ in },
+        previewConfiguration: RecallSessionPreviewService.liveSessionConfiguration
     )
+    .preferredColorScheme(.light)
+}
+
+#Preview("Recall Session Dark") {
+    RecallSessionScreen(
+        items: RecallSessionPreviewService.sessionItems,
+        onRatePreview: { _, _, _ in },
+        previewConfiguration: RecallSessionPreviewService.liveSessionConfiguration
+    )
+    .preferredColorScheme(.dark)
+}
+
+#Preview("AI Response Light") {
+    RecallSessionScreen(
+        items: RecallSessionPreviewService.sessionItems,
+        onRatePreview: { _, _, _ in },
+        previewConfiguration: RecallSessionPreviewService.aiResponseConfiguration
+    )
+    .preferredColorScheme(.light)
+}
+
+#Preview("AI Response Dark") {
+    RecallSessionScreen(
+        items: RecallSessionPreviewService.sessionItems,
+        onRatePreview: { _, _, _ in },
+        previewConfiguration: RecallSessionPreviewService.aiResponseConfiguration
+    )
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Session Complete Light") {
+    RecallSessionScreen(
+        items: RecallSessionPreviewService.sessionItems,
+        onRatePreview: { _, _, _ in },
+        previewConfiguration: RecallSessionPreviewService.sessionCompleteConfiguration
+    )
+    .preferredColorScheme(.light)
+}
+
+#Preview("Session Complete Dark") {
+    RecallSessionScreen(
+        items: RecallSessionPreviewService.sessionItems,
+        onRatePreview: { _, _, _ in },
+        previewConfiguration: RecallSessionPreviewService.sessionCompleteConfiguration
+    )
+    .preferredColorScheme(.dark)
 }

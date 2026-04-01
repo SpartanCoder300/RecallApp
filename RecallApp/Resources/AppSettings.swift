@@ -30,8 +30,16 @@ enum AppSettings {
     static let reviewReminderMinuteKey = "reviewReminderMinute"
     static let reviewCadenceKey = "reviewCadence"
 
+    // Pro
+    static let isProUserKey = "isProUser"
+    static let aiGradingEnabledKey = "aiGradingEnabled"
+
     static var currentCadence: ReviewCadence {
         let rawValue = UserDefaults.standard.string(forKey: reviewCadenceKey) ?? ReviewCadence.standard.rawValue
         return ReviewCadence(rawValue: rawValue) ?? .standard
+    }
+
+    static var isProUser: Bool {
+        UserDefaults.standard.bool(forKey: isProUserKey)
     }
 }

@@ -5,9 +5,12 @@ struct SettingsScreen: View {
     @AppStorage(AppSettings.reviewReminderHourKey) private var reviewReminderHour = 21
     @AppStorage(AppSettings.reviewReminderMinuteKey) private var reviewReminderMinute = 0
     @AppStorage(AppSettings.reviewCadenceKey) private var reviewCadenceRawValue = ReviewCadence.standard.rawValue
+    @AppStorage(AppSettings.isProUserKey) private var isProUser = false
+    @AppStorage(AppSettings.aiGradingEnabledKey) private var aiGradingEnabled = true
 
     @State private var showingReminderError = false
     @State private var reminderErrorMessage = ""
+    @State private var showingProUpgrade = false
 
     private var reviewTime: Binding<Date> {
         Binding {
@@ -69,9 +72,27 @@ struct SettingsScreen: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Section("Subscription") {
-                    Text("Daily Recall Pro — coming soon")
-                        .foregroundStyle(.secondary)
+                Section("Daily Recall Pro") {
+                    if isProUser {
+                        Toggle("AI Answer Grading", isOn: $aiGradingEnabled)
+                        Text("On-device AI grades your answers and suggests a rating.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Button {
+                            showingProUpgrade = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "sparkles")
+                                Text("Unlock Daily Recall Pro")
+                            }
+                        }
+                        .accessibilityLabel("Unlock Daily Recall Pro")
+                        .accessibilityHint("Opens the upgrade screen")
+                    }
+                }
+                .sheet(isPresented: $showingProUpgrade) {
+                    ProUpgradeSheet(isPresented: $showingProUpgrade)
                 }
 
                 Section {

@@ -11,6 +11,10 @@ final class Review {
     var recalledText: String?
 
     var item: RecallItem?
+    /// Reasoning text from the AI grader, if this review was AI-graded.
+    var gradingReasoning: String?
+    /// True if the rating was suggested (or confirmed) via AI grading.
+    var wasAIGraded: Bool = false
 
     /// Typed access to the stored rating value.
     var rating: Rating {
