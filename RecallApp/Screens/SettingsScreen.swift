@@ -91,18 +91,18 @@ struct SettingsScreen: View {
                         .accessibilityHint("Opens the upgrade screen")
                     }
                 }
-                .sheet(isPresented: $showingProUpgrade) {
-                    ProUpgradeSheet(isPresented: $showingProUpgrade)
-                }
-
+                
                 Section {
+                } footer: {
                     Text(appVersionText)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
             .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.large)
+            .sheet(isPresented: $showingProUpgrade) {
+                ProUpgradeSheet(isPresented: $showingProUpgrade)
+            }
             .formStyle(.grouped)
             .alert("Notifications Unavailable", isPresented: $showingReminderError) {
                 Button("OK", role: .cancel) { }

@@ -20,7 +20,7 @@ private struct GradingResponse {
     var rating: String
 
     /// Exactly one concise sentence explaining the rating to the user.
-    @Guide(description: "Exactly one concise sentence, 18 words max. State why the answer earned the rating. Address the user directly.")
+    @Guide(description: "Exactly one concise sentence, 18 words max. Focus on whether the user captured the core idea and any important missing detail. Do not rewrite the full answer. Address the user directly.")
     var reasoning: String
 }
 
@@ -98,16 +98,19 @@ enum AnswerGradingService {
             Correct answer: \(note)
             User's answer: \(recalledText)
 
+            Grade based on meaning, not wording. Do not expect the user's answer to match the stored answer textually.
+            First decide whether the user captured the core idea. Then decide whether any important details were missing.
+
             Rate how well the user's answer matches the correct answer:
-            - Forgot: The answer is missing, wrong, or shows no real understanding.
-            - Hard: Partially correct — the user got the gist but missed key details.
-            - Easy: Correct or close enough — meaning is captured, minor wording differences are fine.
+            - Forgot: The core idea is missing, meaningfully wrong, or shows no real understanding.
+            - Hard: The core idea is mostly there, but one or more important details, distinctions, or qualifiers are missing or wrong.
+            - Easy: The core idea is correct and the important details are present. Minor wording differences, paraphrasing, or different phrasing are fine.
 
             Return:
             - rating: Forgot, Hard, or Easy
-            - reasoning: exactly one sentence, 18 words max, stating why the answer earned that rating
+            - reasoning: exactly one sentence, 18 words max, saying whether the user got the core idea and what important detail was missing, if any
 
-            Do not use more than one sentence. Do not add encouragement, hedging, or extra commentary. Address the user directly.
+            Do not rewrite the full correct answer. Do not provide a full corrected response. Do not use more than one sentence. Do not add encouragement, hedging, or extra commentary. Address the user directly.
             """
         } else {
             return """
@@ -117,16 +120,19 @@ enum AnswerGradingService {
             (No stored answer — use your general knowledge to evaluate correctness.)
             User's answer: \(recalledText)
 
+            Grade based on meaning, not wording. Do not expect the user's answer to match a textbook phrasing.
+            First decide whether the user captured the core idea. Then decide whether any important details were missing.
+
             Based on what a correct answer for "\(term)" would typically be, rate the user's response:
-            - Forgot: The answer is missing, wrong, or shows no real understanding.
-            - Hard: Partially correct — the user got the gist but missed key details.
-            - Easy: Correct or close enough — meaning is captured, minor wording differences are fine.
+            - Forgot: The core idea is missing, meaningfully wrong, or shows no real understanding.
+            - Hard: The core idea is mostly there, but one or more important details, distinctions, or qualifiers are missing or wrong.
+            - Easy: The core idea is correct and the important details are present. Minor wording differences, paraphrasing, or different phrasing are fine.
 
             Return:
             - rating: Forgot, Hard, or Easy
-            - reasoning: exactly one sentence, 18 words max, stating why the answer earned that rating
+            - reasoning: exactly one sentence, 18 words max, saying whether the user got the core idea and what important detail was missing, if any
 
-            Do not use more than one sentence. Do not add encouragement, hedging, or extra commentary. Address the user directly.
+            Do not rewrite the full correct answer. Do not provide a full corrected response. Do not use more than one sentence. Do not add encouragement, hedging, or extra commentary. Address the user directly.
             """
         }
     }

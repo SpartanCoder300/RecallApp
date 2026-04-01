@@ -6,40 +6,74 @@ struct LibraryScreen: View {
     @Query(sort: \RecallItem.createdAt, order: .reverse) private var allItems: [RecallItem]
     @State private var searchText = ""
     @State private var filter: LibraryFilter = .all
+    @State private var showingQuickAdd = false
     @State private var itemPendingDeletion: RecallItem?
     @State private var showingDeleteError = false
     @State private var deleteErrorMessage = ""
 
     var body: some View {
-        LibraryContent(
-            items: allItems,
-            searchText: $searchText,
-            filter: $filter,
-            onDelete: { item in
-                itemPendingDeletion = item
+        NavigationStack {
+            LibraryContent(
+                items: allItems,
+                searchText: $searchText,
+                filter: $filter,
+                onDelete: { item in
+                    itemPendingDeletion = item
+                }
+            )
+            .navigationTitle("Library")
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always))
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        HapticManager.medium()
+                        showingQuickAdd = true
+                    } label: {
+                        Label("Add Card", systemImage: "plus")
+                    }
+                    .accessibilityLabel("Add card")
+                    .accessibilityHint("Opens the form to create a new recall item")
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Picker("Filter", selection: $filter) {
+                            ForEach(LibraryFilter.allCases) { option in
+                                Text(option.rawValue).tag(option)
+                            }
+                        }
+                    } label: {
+                        Label("Filter", systemImage: filter.symbolName)
+                    }
+                    .accessibilityLabel("Filter items")
+                    .accessibilityHint("Changes which library items are shown")
+                }
             }
-        )
-        .confirmationDialog(
-            "Delete this item?",
-            isPresented: Binding(
-                get: { itemPendingDeletion != nil },
-                set: { if !$0 { itemPendingDeletion = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button("Delete Item", role: .destructive) {
-                deletePendingItem()
+            .sheet(isPresented: $showingQuickAdd) {
+                QuickAddSheet()
             }
-            Button("Cancel", role: .cancel) {
-                itemPendingDeletion = nil
+            .confirmationDialog(
+                "Delete this item?",
+                isPresented: Binding(
+                    get: { itemPendingDeletion != nil },
+                    set: { if !$0 { itemPendingDeletion = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Delete Item", role: .destructive) {
+                    deletePendingItem()
+                }
+                Button("Cancel", role: .cancel) {
+                    itemPendingDeletion = nil
+                }
+            } message: {
+                Text("This removes the item and all of its review history.")
             }
-        } message: {
-            Text("This removes the item and all of its review history.")
-        }
-        .alert("Couldn’t Delete Item", isPresented: $showingDeleteError) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(deleteErrorMessage)
+            .alert("Couldn’t Delete Item", isPresented: $showingDeleteError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(deleteErrorMessage)
+            }
         }
     }
 
@@ -64,6 +98,19 @@ enum LibraryFilter: String, CaseIterable, Identifiable {
     case missed = "Missed"
 
     var id: String { rawValue }
+
+    var symbolName: String {
+        switch self {
+        case .all:
+            return "line.3.horizontal.decrease.circle"
+        case .due:
+            return "clock.badge"
+        case .mastered:
+            return "checkmark.circle"
+        case .missed:
+            return "exclamationmark.circle"
+        }
+    }
 }
 
 struct LibraryContent: View {
@@ -98,56 +145,29 @@ struct LibraryContent: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                filterHeader
-
-                Group {
-                    if items.isEmpty {
-                        emptyLibraryState
-                    } else if filteredItems.isEmpty {
-                        emptySearchState
-                    } else {
-                        List {
-                            ForEach(filteredItems) { item in
-                                NavigationLink {
-                                    ItemDetailScreen(item: item)
-                                } label: {
-                                    LibraryRow(item: item)
-                                }
-                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                    Button("Delete", role: .destructive) {
-                                        onDelete?(item)
-                                    }
-                                }
-                                .listRowBackground(DT.Color.background)
+        Group {
+            if items.isEmpty {
+                emptyLibraryState
+            } else if filteredItems.isEmpty {
+                emptySearchState
+            } else {
+                List {
+                    ForEach(filteredItems) { item in
+                        NavigationLink {
+                            ItemDetailScreen(item: item)
+                        } label: {
+                            LibraryRow(item: item)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button("Delete", role: .destructive) {
+                                onDelete?(item)
                             }
                         }
-                        .listStyle(.plain)
+                        .listRowBackground(DT.Color.background)
                     }
                 }
+                .listStyle(.plain)
             }
-            .navigationTitle("Library")
-            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always))
-            .background(DT.Color.background)
-        }
-    }
-
-    private var filterHeader: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DT.Spacing.sm) {
-                ForEach(LibraryFilter.allCases) { chip in
-                    Button(chip.rawValue) {
-                        filter = chip
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(filter == chip ? DT.Color.accent : DT.Color.fillSecondary)
-                    .foregroundStyle(filter == chip ? DT.Color.background : DT.Color.textPrimary)
-                    .accessibilityLabel("Filter by \(chip.rawValue)")
-                }
-            }
-            .padding(.horizontal, DT.Spacing.lg)
-            .padding(.vertical, DT.Spacing.sm)
         }
         .background(DT.Color.background)
     }
@@ -202,28 +222,37 @@ private struct LibraryRow: View {
 }
 
 #Preview("Library") {
-    LibraryContent(
-        items: PreviewService.libraryItems,
-        searchText: .constant(""),
-        filter: .constant(.all),
-        onDelete: { _ in }
-    )
+    NavigationStack {
+        LibraryContent(
+            items: PreviewService.libraryItems,
+            searchText: .constant(""),
+            filter: .constant(.all),
+            onDelete: { _ in }
+        )
+        .navigationTitle("Library")
+    }
 }
 
 #Preview("Library Empty") {
-    LibraryContent(
-        items: [],
-        searchText: .constant(""),
-        filter: .constant(.all),
-        onDelete: { _ in }
-    )
+    NavigationStack {
+        LibraryContent(
+            items: [],
+            searchText: .constant(""),
+            filter: .constant(.all),
+            onDelete: { _ in }
+        )
+        .navigationTitle("Library")
+    }
 }
 
 #Preview("Library Search Empty") {
-    LibraryContent(
-        items: PreviewService.libraryItems,
-        searchText: .constant("zzz"),
-        filter: .constant(.all),
-        onDelete: { _ in }
-    )
+    NavigationStack {
+        LibraryContent(
+            items: PreviewService.libraryItems,
+            searchText: .constant("zzz"),
+            filter: .constant(.all),
+            onDelete: { _ in }
+        )
+        .navigationTitle("Library")
+    }
 }

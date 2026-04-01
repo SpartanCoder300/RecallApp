@@ -5,6 +5,7 @@ struct HomeScreen: View {
     @Query(sort: \RecallItem.createdAt, order: .reverse) private var allItems: [RecallItem]
     @Query private var allReviews: [Review]
     @State private var showingRecallSession = false
+    @State private var showingQuickAdd = false
 
     var body: some View {
         NavigationStack {
@@ -16,9 +17,25 @@ struct HomeScreen: View {
                 ),
                 onBeginReview: { showingRecallSession = true }
             )
-            .toolbar(.hidden, for: .navigationBar)
+            .navigationTitle("Today")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        HapticManager.medium()
+                        showingQuickAdd = true
+                    } label: {
+                        Label("Add Card", systemImage: "plus")
+                    }
+                    .accessibilityLabel("Add card")
+                    .accessibilityHint("Opens the form to create a new recall item")
+                }
+            }
             .fullScreenCover(isPresented: $showingRecallSession) {
                 RecallSessionScreen(items: allItems.filter(\.isDue))
+            }
+            .sheet(isPresented: $showingQuickAdd) {
+                QuickAddSheet()
             }
         }
     }
@@ -30,7 +47,16 @@ struct HomeScreenPreview: View {
     var body: some View {
         NavigationStack {
             HomeScreenContent(snapshot: snapshot, onBeginReview: { })
-                .toolbar(.hidden, for: .navigationBar)
+                .navigationTitle("Today")
+                .navigationBarTitleDisplayMode(.large)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { } label: {
+                            Label("Add Card", systemImage: "plus")
+                        }
+                        .accessibilityLabel("Add card")
+                    }
+                }
         }
     }
 }
@@ -93,7 +119,7 @@ private struct HomeScreenContent: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DT.Spacing.lg) {
-                headerRow
+                summaryHeader
 
                 if snapshot.dueCount > 0 {
                     ReviewBanner(count: snapshot.dueCount, onBeginReview: onBeginReview)
@@ -121,23 +147,13 @@ private struct HomeScreenContent: View {
         .background(DT.Color.background.ignoresSafeArea())
     }
 
-    private var headerRow: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(snapshot.greeting)
-                    .font(DT.Typography.subheadline)
-                    .foregroundStyle(DT.Color.textSecondary)
-
-                Text("Today")
-                    .font(DT.Typography.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundStyle(DT.Color.textPrimary)
-            }
-
-            Spacer()
+    private var summaryHeader: some View {
+        VStack(alignment: .leading, spacing: DT.Spacing.sm) {
+            Text(snapshot.greeting)
+                .font(DT.Typography.headline)
+                .foregroundStyle(DT.Color.textPrimary)
 
             StreakChip(streak: snapshot.streak)
-                .padding(.top, DT.Spacing.xs)
         }
     }
 

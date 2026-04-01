@@ -18,6 +18,7 @@ struct RecallSessionScreen: View {
     @State private var saveErrorMessage = ""
     @State private var showingSaveError = false
     @State private var showingExitConfirmation = false
+    @State private var lastUndoAction: SessionUndoAction?
     @FocusState private var recallFieldFocused: Bool
     @AppStorage(AppSettings.isProUserKey) private var isProUser = false
     @AppStorage(AppSettings.aiGradingEnabledKey) private var aiGradingEnabled = true
@@ -81,6 +82,10 @@ struct RecallSessionScreen: View {
         if case .loading = gradingState { return true }
         if case .idle = gradingState { return shouldUseAIGrading && hasTypedRecall }
         return false
+    }
+
+    private var canUndoLastAction: Bool {
+        lastUndoAction != nil
     }
 
     var body: some View {
@@ -154,12 +159,37 @@ struct RecallSessionScreen: View {
                     }
 
                     ToolbarItemGroup(placement: .keyboard) {
+                        if shouldShowCheckButton {
+                            Button {
+                                Task { await runAIGrading() }
+                            } label: {
+                                if isGradingInProgress {
+                                    Text("Grading…")
+                                } else {
+                                    Label("Check Answer", systemImage: "sparkles")
+                                }
+                            }
+                            .disabled(isGradingInProgress)
+                            .accessibilityLabel(isGradingInProgress ? "Grading in progress" : "Check answer with AI")
+                        }
+
                         Spacer()
 
                         Button("Done") {
                             recallFieldFocused = false
                         }
                         .accessibilityLabel("Dismiss keyboard")
+                    }
+                }
+
+                if canUndoLastAction {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(action: undoLastAction) {
+                            Image(systemName: "arrow.uturn.backward")
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .accessibilityLabel("Undo last action")
                     }
                 }
             }
@@ -299,6 +329,11 @@ struct RecallSessionScreen: View {
     private func skipCurrentItem() {
         guard let currentItem, queue.count > 1 else { return }
 
+        lastUndoAction = .skip(
+            item: currentItem,
+            cardState: currentCardState
+        )
+
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
             queue.removeFirst()
             queue.append(currentItem)
@@ -310,6 +345,8 @@ struct RecallSessionScreen: View {
         guard let currentItem else { return }
 
         let trimmedRecall = recalledText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let previousCardState = currentCardState
+        let sessionResult = SessionResult(item: currentItem, rating: rating)
         let review = Review(
             rating: rating,
             recalledText: trimmedRecall.isEmpty ? nil : trimmedRecall
@@ -323,9 +360,15 @@ struct RecallSessionScreen: View {
         if let onRatePreview {
             onRatePreview(currentItem, rating, trimmedRecall.isEmpty ? nil : trimmedRecall)
             HapticManager.success()
+            lastUndoAction = .rate(
+                item: currentItem,
+                result: sessionResult,
+                review: nil,
+                cardState: previousCardState
+            )
 
             withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                results.append(SessionResult(item: currentItem, rating: rating))
+                results.append(sessionResult)
                 queue.removeFirst()
                 completedCount += 1
                 resetCardState()
@@ -350,12 +393,59 @@ struct RecallSessionScreen: View {
         }
 
         HapticManager.success()
+        lastUndoAction = .rate(
+            item: currentItem,
+            result: sessionResult,
+            review: review,
+            cardState: previousCardState
+        )
 
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-            results.append(SessionResult(item: currentItem, rating: rating))
+            results.append(sessionResult)
             queue.removeFirst()
             completedCount += 1
             resetCardState()
+        }
+    }
+
+    private var currentCardState: RecallCardState {
+        RecallCardState(
+            recalledText: recalledText,
+            revealedNote: revealedNote,
+            hintText: hintText,
+            gradingState: gradingState
+        )
+    }
+
+    private func undoLastAction() {
+        guard let lastUndoAction else { return }
+
+        switch lastUndoAction {
+        case .skip(let item, let cardState):
+            guard let lastItem = queue.popLast() else { return }
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                queue.insert(lastItem.id == item.id ? lastItem : item, at: 0)
+                restoreCardState(cardState)
+                self.lastUndoAction = nil
+            }
+
+        case .rate(let item, let result, let review, let cardState):
+            if let review {
+                if let index = item.reviews?.firstIndex(where: { $0 === review }) {
+                    item.reviews?.remove(at: index)
+                }
+                modelContext.delete(review)
+            }
+
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                if let lastResult = results.last, lastResult.id == result.id {
+                    results.removeLast()
+                }
+                completedCount = max(0, completedCount - 1)
+                queue.insert(item, at: 0)
+                restoreCardState(cardState)
+                self.lastUndoAction = nil
+            }
         }
     }
 
@@ -366,6 +456,16 @@ struct RecallSessionScreen: View {
         gradingState = .idle
         DispatchQueue.main.async {
             recallFieldFocused = true
+        }
+    }
+
+    private func restoreCardState(_ state: RecallCardState) {
+        recalledText = state.recalledText
+        revealedNote = state.revealedNote
+        hintText = state.hintText
+        gradingState = state.gradingState
+        DispatchQueue.main.async {
+            recallFieldFocused = state.gradingState.isIdle
         }
     }
 
@@ -402,6 +502,23 @@ enum GradingState {
     case loading
     case result(GradingResult)
     case failed
+
+    var isIdle: Bool {
+        if case .idle = self { return true }
+        return false
+    }
+}
+
+private struct RecallCardState {
+    let recalledText: String
+    let revealedNote: String?
+    let hintText: String?
+    let gradingState: GradingState
+}
+
+private enum SessionUndoAction {
+    case skip(item: RecallItem, cardState: RecallCardState)
+    case rate(item: RecallItem, result: SessionResult, review: Review?, cardState: RecallCardState)
 }
 
 struct SessionResult: Identifiable {
@@ -441,6 +558,17 @@ private struct RecallCardView: View {
                         .padding(.bottom, DT.Spacing.xs)
                     AIReasoningCard(result: gradingResult)
                         .transition(.opacity)
+
+                    if let revealedNote {
+                        disclosureCard(title: "Answer", text: revealedNote)
+                            .transition(.opacity)
+                    } else if hasStoredAnswer {
+                        Button("Show Answer", action: onReveal)
+                            .buttonStyle(.bordered)
+                            .controlSize(.regular)
+                            .accessibilityLabel("Show answer")
+                            .transition(.opacity)
+                    }
                 } else {
                     RecallComposer(
                         text: $recalledText,
@@ -482,6 +610,13 @@ private struct RecallCardView: View {
             }
         }
         .scrollDismissesKeyboard(.interactively)
+    }
+
+    private var hasStoredAnswer: Bool {
+        guard let note = item.note?.trimmingCharacters(in: .whitespacesAndNewlines) else {
+            return false
+        }
+        return !note.isEmpty
     }
 
     private func yourAnswerCard(text: String) -> some View {
