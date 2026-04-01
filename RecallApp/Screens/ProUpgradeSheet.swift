@@ -6,7 +6,7 @@ struct ProUpgradeSheet: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            Form {
                 Section {
                     VStack(spacing: DT.Spacing.sm) {
                         Image(systemName: "sparkles")
@@ -22,7 +22,6 @@ struct ProUpgradeSheet: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, DT.Spacing.sm)
-                    .listRowBackground(Color.clear)
                 }
 
                 Section("What you get") {
@@ -48,12 +47,7 @@ struct ProUpgradeSheet: View {
                             .frame(maxWidth: .infinity)
                             .fontWeight(.semibold)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
                     .accessibilityLabel("Unlock Daily Recall Pro")
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(.init())
-                    .padding(.horizontal)
                 }
             }
             .navigationTitle("Upgrade")

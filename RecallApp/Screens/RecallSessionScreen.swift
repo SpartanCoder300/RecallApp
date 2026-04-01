@@ -723,7 +723,8 @@ struct SessionCompleteView: View {
                 }
 
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(.largeTitle, design: .rounded).weight(.bold))
+                    .font(DT.Typography.largeTitle)
+                    .fontWeight(.bold)
                     .foregroundStyle(DT.Color.accent)
                     .scaleEffect(iconVisible ? 1 : 0.7)
                     .opacity(iconVisible ? 1 : 0)
@@ -851,6 +852,7 @@ private struct CelebrationBurstView: View {
                     .offset(confettiOffset(for: index))
                     .scaleEffect(isVisible ? 1 : 0.2)
                     .opacity(isVisible ? 0 : 1)
+                    // Custom: a short ease-out keeps the celebratory burst readable without lingering.
                     .animation(
                         .easeOut(duration: 0.7).delay(Double(index) * 0.03),
                         value: isVisible

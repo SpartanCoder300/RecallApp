@@ -9,7 +9,8 @@ struct StatCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DT.Spacing.xs) {
             Text("\(value)")
-                .font(.system(.largeTitle, design: .rounded).bold())
+                .font(DT.Typography.largeTitle)
+                .fontWeight(.bold)
                 .foregroundStyle(DT.Color.textPrimary)
                 .contentTransition(.numericText())
                 .animation(.spring(response: 0.35, dampingFraction: 0.8), value: value)
