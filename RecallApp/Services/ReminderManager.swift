@@ -4,6 +4,15 @@ import UserNotifications
 enum ReminderManager {
     private static let reminderIdentifier = "daily_recall_review_reminder"
 
+    static func authorizationStatus() async -> UNAuthorizationStatus {
+        await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+    }
+
+    static func hasScheduledReminder() async -> Bool {
+        let requests = await UNUserNotificationCenter.current().pendingNotificationRequests()
+        return requests.contains { $0.identifier == reminderIdentifier }
+    }
+
     static func requestPermissionIfNeeded() async throws -> Bool {
         let center = UNUserNotificationCenter.current()
         let settings = await center.notificationSettings()

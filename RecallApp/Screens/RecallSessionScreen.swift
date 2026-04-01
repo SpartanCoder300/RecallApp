@@ -104,6 +104,15 @@ struct RecallSessionScreen: View {
                             .foregroundStyle(DT.Color.textPrimary)
                             .accessibilityAddTraits(.isHeader)
                     }
+
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+
+                        Button("Done") {
+                            recallFieldFocused = false
+                        }
+                        .accessibilityLabel("Dismiss keyboard")
+                    }
                 }
             }
         }
@@ -161,7 +170,7 @@ struct RecallSessionScreen: View {
 
     private func revealNote() {
         let note = currentItem?.note?.trimmingCharacters(in: .whitespacesAndNewlines)
-        revealedNote = (note?.isEmpty == false) ? note : "No note available."
+        revealedNote = (note?.isEmpty == false) ? note : "No answer available."
     }
 
     private func skipCurrentItem() {
@@ -282,7 +291,7 @@ private struct RecallCardView: View {
             }
 
             if let revealedNote {
-                disclosureCard(title: "Revealed note", text: revealedNote)
+                disclosureCard(title: "Answer", text: revealedNote)
             }
 
             HStack(spacing: DT.Spacing.sm) {
@@ -291,10 +300,10 @@ private struct RecallCardView: View {
                     .controlSize(.regular)
                     .accessibilityLabel("Show hint")
 
-                Button("Reveal", action: onReveal)
+                Button("Answer", action: onReveal)
                     .buttonStyle(.bordered)
                     .controlSize(.regular)
-                    .accessibilityLabel("Reveal note")
+                    .accessibilityLabel("Show answer")
 
                 Button("Skip", action: onSkip)
                     .buttonStyle(.bordered)
@@ -363,6 +372,7 @@ private struct RecallComposer: View {
                 .font(DT.Typography.body)
                 .focused($isFocused)
                 .scrollContentBackground(.hidden)
+                .scrollDismissesKeyboard(.interactively)
                 .padding(.horizontal, DT.Spacing.sm)
                 .padding(.vertical, DT.Spacing.sm)
 

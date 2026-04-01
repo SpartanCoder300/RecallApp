@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SettingsScreen: View {
-    @AppStorage(AppSettings.reviewReminderEnabledKey) private var reviewReminderEnabled = true
+    @AppStorage(AppSettings.reviewReminderEnabledKey) private var reviewReminderEnabled = false
     @AppStorage(AppSettings.reviewReminderHourKey) private var reviewReminderHour = 21
     @AppStorage(AppSettings.reviewReminderMinuteKey) private var reviewReminderMinute = 0
     @AppStorage(AppSettings.reviewCadenceKey) private var reviewCadenceRawValue = ReviewCadence.standard.rawValue
@@ -88,6 +88,9 @@ struct SettingsScreen: View {
             } message: {
                 Text(reminderErrorMessage)
             }
+            .task {
+                await syncReminderState()
+            }
         }
     }
 
@@ -133,6 +136,27 @@ struct SettingsScreen: View {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
         return "Version \(version) (\(build))"
+    }
+
+    private func syncReminderState() async {
+        let status = await ReminderManager.authorizationStatus()
+        let hasScheduledReminder = await ReminderManager.hasScheduledReminder()
+
+        switch status {
+        case .authorized, .provisional, .ephemeral:
+            if reviewReminderEnabled, !hasScheduledReminder {
+                try? await ReminderManager.scheduleDailyReminder(
+                    hour: reviewReminderHour,
+                    minute: reviewReminderMinute
+                )
+            }
+        case .denied, .notDetermined:
+            if reviewReminderEnabled {
+                reviewReminderEnabled = false
+            }
+        @unknown default:
+            reviewReminderEnabled = false
+        }
     }
 }
 

@@ -14,6 +14,15 @@ struct ContentView: View {
 
     enum AppTab { case today, library, collections, settings }
 
+    private var showsAddButton: Bool {
+        switch selectedTab {
+        case .today, .library:
+            return true
+        case .collections, .settings:
+            return false
+        }
+    }
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             TabView(selection: $selectedTab) {
@@ -34,24 +43,26 @@ struct ContentView: View {
                     .tag(AppTab.settings)
             }
 
-            // Primary action for every screen in the app.
-            // Floats above the tab bar for clear separation from navigation.
-            Button {
-                HapticManager.medium()
-                showingQuickAdd = true
-            } label: {
-                Image(systemName: "plus")
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 54, height: 54)
-                    .background(DT.Color.accent)
-                    .clipShape(Circle())
-                    .shadow(color: DT.Color.accent.opacity(0.22), radius: 6, x: 0, y: 2)
+            if showsAddButton {
+                Button {
+                    HapticManager.medium()
+                    showingQuickAdd = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 54, height: 54)
+                        .background(DT.Color.accent)
+                        .clipShape(Circle())
+                        .shadow(color: DT.Color.accent.opacity(0.22), radius: 6, x: 0, y: 2)
+                }
+                .accessibilityLabel("Add card")
+                .padding(.trailing, DT.Spacing.xl)
+                .padding(.bottom, DT.Spacing.xxl + DT.Spacing.xl)
+                .transition(.scale.combined(with: .opacity))
             }
-            .accessibilityLabel("Add item")
-            .padding(.trailing, DT.Spacing.xl)
-            .padding(.bottom, DT.Spacing.xxl + DT.Spacing.xl)
         }
+        .animation(.default, value: showsAddButton)
         .sheet(isPresented: $showingQuickAdd) {
             QuickAddSheet()
         }

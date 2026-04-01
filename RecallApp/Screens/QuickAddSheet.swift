@@ -27,21 +27,32 @@ struct QuickAddSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("What did you learn?", text: $term)
+                    TextField("Prompt", text: $term)
                         .focused($focus, equals: .term)
                         .submitLabel(.next)
                         .onSubmit { focus = .note }
-                        .accessibilityLabel("Term")
+                        .accessibilityLabel("Prompt")
 
-                    TextField("Add a hint or context...", text: $note, axis: .vertical)
-                        .focused($focus, equals: .note)
-                        .submitLabel(.done)
-                        .onSubmit { save() }
-                        .lineLimit(1...5)
-                        .accessibilityLabel("Hint or context")
+                    ZStack(alignment: .topLeading) {
+                        if note.isEmpty {
+                            Text("Answer")
+                                .font(DT.Typography.body)
+                                .foregroundStyle(DT.Color.textTertiary)
+                                .padding(.horizontal, DT.Spacing.xs)
+                                .padding(.vertical, DT.Spacing.sm)
+                                .allowsHitTesting(false)
+                        }
+
+                        TextEditor(text: $note)
+                            .focused($focus, equals: .note)
+                            .font(DT.Typography.body)
+                            .scrollContentBackground(.hidden)
+                            .frame(minHeight: 120)
+                            .accessibilityLabel("Answer")
+                    }
                 }
             }
-            .navigationTitle("New Item")
+            .navigationTitle("New Card")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
