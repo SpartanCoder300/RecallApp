@@ -60,13 +60,12 @@ struct RecallSessionScreen: View {
                             recalledText: $recalledText,
                             hintText: hintText,
                             revealedNote: revealedNote,
-                            hasAttemptedRecall: hasAttemptedRecall,
                             canSkip: queue.count > 1,
                             recallFieldFocused: $recallFieldFocused,
                             onHint: revealHint,
                             onReveal: revealNote,
                             onSkip: skipCurrentItem,
-                            onRate: rateCurrentItem(_:)
+                            showsRatings: hasAttemptedRecall
                         )
                         .id(currentItem.id)
                         .transition(
@@ -80,6 +79,11 @@ struct RecallSessionScreen: View {
                     .padding(.horizontal, DT.Spacing.lg)
                     .padding(.top, DT.Spacing.md)
                     .padding(.bottom, DT.Spacing.lg)
+                    .safeAreaInset(edge: .bottom) {
+                        if hasAttemptedRecall {
+                            ratingBar
+                        }
+                    }
                 } else {
                     sessionComplete
                 }
@@ -156,6 +160,36 @@ struct RecallSessionScreen: View {
             dismiss()
         }
         .padding(DT.Spacing.lg)
+    }
+
+    private var ratingBar: some View {
+        HStack(spacing: DT.Spacing.sm) {
+            Button("Forgot") { rateCurrentItem(.forgot) }
+                .buttonStyle(.borderedProminent)
+                .tint(DT.Color.destructive)
+                .controlSize(.large)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel("Rate forgot")
+
+            Button("Hard") { rateCurrentItem(.hard) }
+                .buttonStyle(.borderedProminent)
+                .tint(DT.Color.caution)
+                .controlSize(.large)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel("Rate hard")
+
+            Button("Easy") { rateCurrentItem(.easy) }
+                .buttonStyle(.borderedProminent)
+                .tint(DT.Color.accent)
+                .controlSize(.large)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel("Rate easy")
+        }
+        .padding(.horizontal, DT.Spacing.lg)
+        .padding(.top, DT.Spacing.sm)
+        .padding(.bottom, DT.Spacing.sm)
+        .background(DT.Color.background)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
     private func revealHint() {
@@ -262,85 +296,61 @@ private struct RecallCardView: View {
     @Binding var recalledText: String
     let hintText: String?
     let revealedNote: String?
-    let hasAttemptedRecall: Bool
     let canSkip: Bool
     @FocusState.Binding var recallFieldFocused: Bool
     let onHint: () -> Void
     let onReveal: () -> Void
     let onSkip: () -> Void
-    let onRate: (Rating) -> Void
+    let showsRatings: Bool
 
     var body: some View {
-        VStack(spacing: DT.Spacing.sm) {
-            Text(item.term)
-                .font(DT.Typography.largeTitle)
-                .fontWeight(.bold)
-                .foregroundStyle(DT.Color.textPrimary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity)
-                .padding(.top, DT.Spacing.lg)
+        ScrollView {
+            VStack(spacing: DT.Spacing.sm) {
+                Text(item.term)
+                    .font(DT.Typography.largeTitle)
+                    .fontWeight(.bold)
+                    .foregroundStyle(DT.Color.textPrimary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, DT.Spacing.lg)
 
-            RecallComposer(
-                text: $recalledText,
-                isFocused: $recallFieldFocused
-            )
-                .accessibilityLabel("Recall response")
+                RecallComposer(
+                    text: $recalledText,
+                    isFocused: $recallFieldFocused
+                )
+                    .accessibilityLabel("Recall response")
 
-            if let hintText {
-                disclosureCard(title: "Hint", text: hintText)
-            }
-
-            if let revealedNote {
-                disclosureCard(title: "Answer", text: revealedNote)
-            }
-
-            HStack(spacing: DT.Spacing.sm) {
-                Button("Hint", action: onHint)
-                    .buttonStyle(.bordered)
-                    .controlSize(.regular)
-                    .accessibilityLabel("Show hint")
-
-                Button("Answer", action: onReveal)
-                    .buttonStyle(.bordered)
-                    .controlSize(.regular)
-                    .accessibilityLabel("Show answer")
-
-                Button("Skip", action: onSkip)
-                    .buttonStyle(.bordered)
-                    .controlSize(.regular)
-                    .disabled(!canSkip)
-                    .accessibilityLabel("Skip card")
-            }
-            .frame(maxWidth: .infinity)
-
-            Spacer(minLength: DT.Spacing.xl)
-
-            if hasAttemptedRecall {
-                HStack(spacing: DT.Spacing.sm) {
-                    Button("Forgot") { onRate(.forgot) }
-                        .buttonStyle(.borderedProminent)
-                        .tint(DT.Color.destructive)
-                        .controlSize(.large)
-                        .frame(maxWidth: .infinity)
-                        .accessibilityLabel("Rate forgot")
-
-                    Button("Hard") { onRate(.hard) }
-                        .buttonStyle(.borderedProminent)
-                        .tint(DT.Color.caution)
-                        .controlSize(.large)
-                        .frame(maxWidth: .infinity)
-                        .accessibilityLabel("Rate hard")
-
-                    Button("Easy") { onRate(.easy) }
-                        .buttonStyle(.borderedProminent)
-                        .tint(DT.Color.accent)
-                        .controlSize(.large)
-                        .frame(maxWidth: .infinity)
-                        .accessibilityLabel("Rate easy")
+                if let hintText {
+                    disclosureCard(title: "Hint", text: hintText)
                 }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+
+                if let revealedNote {
+                    disclosureCard(title: "Answer", text: revealedNote)
+                }
+
+                HStack(spacing: DT.Spacing.sm) {
+                    Button("Hint", action: onHint)
+                        .buttonStyle(.bordered)
+                        .controlSize(.regular)
+                        .accessibilityLabel("Show hint")
+
+                    Button("Answer", action: onReveal)
+                        .buttonStyle(.bordered)
+                        .controlSize(.regular)
+                        .accessibilityLabel("Show answer")
+
+                    Button("Skip", action: onSkip)
+                        .buttonStyle(.bordered)
+                        .controlSize(.regular)
+                        .disabled(!canSkip)
+                        .accessibilityLabel("Skip card")
+                }
+                .frame(maxWidth: .infinity)
+
+                Color.clear.frame(height: showsRatings ? 88 : 0)
             }
         }
+        .scrollDismissesKeyboard(.interactively)
     }
 
     private func disclosureCard(title: String, text: String) -> some View {
