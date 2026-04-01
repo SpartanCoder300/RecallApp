@@ -197,7 +197,7 @@ private struct StreakChip: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: "flame.fill")
-                .foregroundStyle(DT.Color.accent)
+                .foregroundStyle(DT.Color.caution)
 
             Text("\(streak)d")
                 .fontWeight(.semibold)

@@ -15,6 +15,9 @@ struct ItemDetailScreen: View {
     @State private var showingErrorAlert = false
     @State private var errorTitle = ""
     @State private var errorMessage = ""
+    @FocusState private var editFocus: EditField?
+
+    private enum EditField { case term, note }
 
     private var sortedReviews: [Review] {
         (item.reviews ?? []).sorted { $0.reviewedAt > $1.reviewedAt }
@@ -41,11 +44,13 @@ struct ItemDetailScreen: View {
             Section {
                 if isEditing {
                     TextField("Term", text: $draftTerm, axis: .vertical)
+                        .focused($editFocus, equals: .term)
                         .textInputAutocapitalization(.words)
                         .autocorrectionDisabled()
                         .accessibilityLabel("Term")
 
                     TextEditor(text: $draftNote)
+                        .focused($editFocus, equals: .note)
                         .frame(minHeight: 120)
                         .accessibilityLabel("Note")
                 } else {
@@ -61,9 +66,16 @@ struct ItemDetailScreen: View {
                                 .font(DT.Typography.body)
                                 .foregroundStyle(DT.Color.textPrimary)
                         } else {
-                            Text("No note yet")
-                                .font(DT.Typography.body)
-                                .foregroundStyle(DT.Color.textSecondary)
+                            Button {
+                                startEditingNote()
+                            } label: {
+                                Text("Add answer…")
+                                    .font(DT.Typography.body)
+                                    .foregroundStyle(DT.Color.accent)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Add answer")
+                            .accessibilityHint("Opens edit mode focused on the answer field")
                         }
                     }
                     .padding(.vertical, DT.Spacing.xs)
@@ -164,6 +176,12 @@ struct ItemDetailScreen: View {
     private func startEditing() {
         syncDrafts()
         isEditing = true
+    }
+
+    private func startEditingNote() {
+        syncDrafts()
+        isEditing = true
+        DispatchQueue.main.async { editFocus = .note }
     }
 
     private func syncDrafts() {

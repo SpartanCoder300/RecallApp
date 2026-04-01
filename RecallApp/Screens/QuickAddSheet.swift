@@ -7,6 +7,7 @@ struct QuickAddSheet: View {
 
     @State private var term = ""
     @State private var note = ""
+    @State private var showingAnswer = false
     @State private var saveErrorMessage = ""
     @State private var showingSaveError = false
     @FocusState private var focus: Field?
@@ -27,28 +28,29 @@ struct QuickAddSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Prompt", text: $term)
+                    TextField("Prompt", text: $term, axis: .vertical)
                         .focused($focus, equals: .term)
-                        .submitLabel(.next)
-                        .onSubmit { focus = .note }
+                        .submitLabel(showingAnswer ? .next : .done)
+                        .onSubmit { if showingAnswer { focus = .note } }
                         .accessibilityLabel("Prompt")
 
-                    ZStack(alignment: .topLeading) {
-                        if note.isEmpty {
-                            Text("Answer")
-                                .font(DT.Typography.body)
-                                .foregroundStyle(DT.Color.textTertiary)
-                                .padding(.horizontal, DT.Spacing.xs)
-                                .padding(.vertical, DT.Spacing.sm)
-                                .allowsHitTesting(false)
-                        }
-
-                        TextEditor(text: $note)
+                    if showingAnswer {
+                        TextField("Answer", text: $note, axis: .vertical)
                             .focused($focus, equals: .note)
-                            .font(DT.Typography.body)
-                            .scrollContentBackground(.hidden)
-                            .frame(minHeight: 120)
                             .accessibilityLabel("Answer")
+                    }
+                }
+
+                if !showingAnswer {
+                    Section {
+                        Button {
+                            withAnimation { showingAnswer = true }
+                            DispatchQueue.main.async { focus = .note }
+                        } label: {
+                            Label("Add Answer", systemImage: "plus.circle")
+                        }
+                        .accessibilityLabel("Add answer")
+                        .accessibilityHint("Expands the sheet to include an answer field")
                     }
                 }
             }
@@ -63,7 +65,7 @@ struct QuickAddSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { save() }
                         .disabled(termIsEmpty)
-                        .accessibilityLabel("Save item")
+                        .accessibilityLabel("Save card")
                 }
             }
             .alert("Unable to Save Item", isPresented: $showingSaveError) {
@@ -75,9 +77,7 @@ struct QuickAddSheet: View {
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .onAppear {
-            DispatchQueue.main.async {
-                focus = .term
-            }
+            DispatchQueue.main.async { focus = .term }
         }
     }
 
@@ -121,7 +121,14 @@ struct QuickAddSheet: View {
 
 // MARK: - Previews
 
-#Preview("Quick Add — Empty") {
+#Preview("Quick Add — Compact") {
+    Color.clear
+        .sheet(isPresented: .constant(true)) {
+            QuickAddSheet(onSavePreview: { _, _ in })
+        }
+}
+
+#Preview("Quick Add — With Answer") {
     Color.clear
         .sheet(isPresented: .constant(true)) {
             QuickAddSheet(onSavePreview: { _, _ in })
