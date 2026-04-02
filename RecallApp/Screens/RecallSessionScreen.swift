@@ -214,7 +214,7 @@ struct RecallSessionScreen: View {
         }
         .onAppear {
             if queue.isEmpty, previewConfiguration == nil {
-                queue = items
+                queue = items.sorted { sessionPriority(of: $0) > sessionPriority(of: $1) }
             }
             if previewConfiguration?.focusRecallField == true || previewConfiguration == nil {
                 DispatchQueue.main.async {
@@ -311,6 +311,17 @@ struct RecallSessionScreen: View {
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
+    /// Returns an ordering priority for session queue sequencing.
+    /// Higher values sort earlier. Forgot > New > Hard > Easy (overdue).
+    private func sessionPriority(of item: RecallItem) -> Int {
+        switch item.reviews?.max(by: { $0.reviewedAt < $1.reviewedAt })?.rating {
+        case nil:     return 3  // New card — introduce early while attention is fresh
+        case .forgot: return 4  // Recently forgotten — highest urgency
+        case .hard:   return 2
+        case .easy:   return 1
+        }
+    }
+
     private func revealHint() {
         guard let note = currentItem?.note?.trimmingCharacters(in: .whitespacesAndNewlines), !note.isEmpty else {
             hintText = "No hint available."
@@ -355,6 +366,7 @@ struct RecallSessionScreen: View {
         if case .result(let gradingResult) = gradingState {
             review.gradingReasoning = gradingResult.reasoning
             review.wasAIGraded = true
+            review.aiSuggestedRating = gradingResult.suggestedRating.rawValue
         }
 
         if let onRatePreview {
@@ -478,7 +490,8 @@ struct RecallSessionScreen: View {
             let result = try await AnswerGradingService.grade(
                 recalledText: recalledText,
                 term: currentItem.term,
-                note: currentItem.note
+                note: currentItem.note,
+                collectionName: currentItem.collection?.name
             )
             withAnimation { gradingState = .result(result) }
             HapticManager.soft()

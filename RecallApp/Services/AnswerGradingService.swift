@@ -50,12 +50,16 @@ enum AnswerGradingService {
     ///   - recalledText: What the user typed during the review session.
     ///   - term: The question or term on the card.
     ///   - note: The stored answer on the card, if any.
+    ///   - collectionName: The name of the collection this card belongs to, if any.
+    ///     Provides domain context (e.g. "Spanish Vocabulary", "Anatomy") so the model
+    ///     can grade domain-specific nuance more accurately.
     /// - Returns: A `GradingResult` with a suggested `Rating` and reasoning.
     /// - Throws: `GradingError` if the model is unavailable or returns an unexpected response.
     static func grade(
         recalledText: String,
         term: String,
-        note: String?
+        note: String?,
+        collectionName: String? = nil
     ) async throws -> GradingResult {
         // Fast path: empty input is always Forgot — no model call needed.
         guard !recalledText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -69,7 +73,7 @@ enum AnswerGradingService {
         }
 
         let session = LanguageModelSession(model: model)
-        let prompt = buildPrompt(recalledText: recalledText, term: term, note: note)
+        let prompt = buildPrompt(recalledText: recalledText, term: term, note: note, collectionName: collectionName)
 
         let response = try await session.respond(
             to: prompt,
@@ -88,13 +92,28 @@ enum AnswerGradingService {
     private static func buildPrompt(
         recalledText: String,
         term: String,
-        note: String?
+        note: String?,
+        collectionName: String?
     ) -> String {
+        let domainLine = collectionName.map { "Subject area: \($0)\n" } ?? ""
+        let ratingCriteria = """
+            - Forgot: The core idea is missing, meaningfully wrong, or shows no real understanding.
+            - Hard: The core idea is mostly there, but one or more important details, distinctions, or qualifiers are missing or wrong.
+            - Easy: The core idea is correct and the important details are present. Minor wording differences, paraphrasing, or different phrasing are fine.
+            """
+        let outputRules = """
+            Return:
+            - rating: Forgot, Hard, or Easy
+            - reasoning: exactly one sentence, 18 words max, saying whether the user got the core idea and what important detail was missing, if any
+
+            Do not rewrite the full correct answer. Do not provide a full corrected response. Do not use more than one sentence. Do not add encouragement, hedging, or extra commentary. Address the user directly.
+            """
+
         if let note, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return """
             You are grading a spaced-repetition flashcard recall attempt.
 
-            Card term: \(term)
+            \(domainLine)Card term: \(term)
             Correct answer: \(note)
             User's answer: \(recalledText)
 
@@ -102,21 +121,15 @@ enum AnswerGradingService {
             First decide whether the user captured the core idea. Then decide whether any important details were missing.
 
             Rate how well the user's answer matches the correct answer:
-            - Forgot: The core idea is missing, meaningfully wrong, or shows no real understanding.
-            - Hard: The core idea is mostly there, but one or more important details, distinctions, or qualifiers are missing or wrong.
-            - Easy: The core idea is correct and the important details are present. Minor wording differences, paraphrasing, or different phrasing are fine.
+            \(ratingCriteria)
 
-            Return:
-            - rating: Forgot, Hard, or Easy
-            - reasoning: exactly one sentence, 18 words max, saying whether the user got the core idea and what important detail was missing, if any
-
-            Do not rewrite the full correct answer. Do not provide a full corrected response. Do not use more than one sentence. Do not add encouragement, hedging, or extra commentary. Address the user directly.
+            \(outputRules)
             """
         } else {
             return """
             You are grading a spaced-repetition flashcard recall attempt.
 
-            Card term: \(term)
+            \(domainLine)Card term: \(term)
             (No stored answer — use your general knowledge to evaluate correctness.)
             User's answer: \(recalledText)
 
@@ -124,15 +137,9 @@ enum AnswerGradingService {
             First decide whether the user captured the core idea. Then decide whether any important details were missing.
 
             Based on what a correct answer for "\(term)" would typically be, rate the user's response:
-            - Forgot: The core idea is missing, meaningfully wrong, or shows no real understanding.
-            - Hard: The core idea is mostly there, but one or more important details, distinctions, or qualifiers are missing or wrong.
-            - Easy: The core idea is correct and the important details are present. Minor wording differences, paraphrasing, or different phrasing are fine.
+            \(ratingCriteria)
 
-            Return:
-            - rating: Forgot, Hard, or Easy
-            - reasoning: exactly one sentence, 18 words max, saying whether the user got the core idea and what important detail was missing, if any
-
-            Do not rewrite the full correct answer. Do not provide a full corrected response. Do not use more than one sentence. Do not add encouragement, hedging, or extra commentary. Address the user directly.
+            \(outputRules)
             """
         }
     }

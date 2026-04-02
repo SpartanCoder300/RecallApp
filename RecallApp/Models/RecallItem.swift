@@ -51,10 +51,10 @@ final class RecallItem {
         let reviews = reviews ?? []
         guard !reviews.isEmpty else { return .new }
 
-        let sorted = reviews.sorted { $0.reviewedAt < $1.reviewedAt }
+        let records = reviews.map { ReviewRecord(reviewedAt: $0.reviewedAt, rating: $0.rating) }
 
-        // Mastered: 5+ reviews and the most recent was Easy.
-        if sorted.count >= 5, sorted.last?.rating == .easy {
+        // Mastered: SM-2 interval has reached the cadence-specific mastery threshold.
+        if SchedulingEngine.isMastered(after: records, cadence: AppSettings.currentCadence) {
             return .mastered
         }
 

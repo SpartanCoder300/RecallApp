@@ -15,6 +15,9 @@ final class Review {
     var gradingReasoning: String?
     /// True if the rating was suggested (or confirmed) via AI grading.
     var wasAIGraded: Bool = false
+    /// The rating the AI suggested, stored separately from the user's final rating.
+    /// Nil when wasAIGraded is false. Compare against `ratingValue` to detect overrides.
+    var aiSuggestedRating: String?
 
     /// Typed access to the stored rating value.
     var rating: Rating {
