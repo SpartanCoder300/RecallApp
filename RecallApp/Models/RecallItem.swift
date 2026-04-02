@@ -9,6 +9,12 @@ final class RecallItem {
     var term: String = ""
     /// Optional hint shown during recall if the user asks for help.
     var note: String?
+    /// Canonical facts the user should include for a strong answer.
+    var keyFactsText: String?
+    /// Alternate terms or phrasings that should still count as correct.
+    var acceptedSynonymsText: String?
+    /// Common confusions the grader should watch for.
+    var commonConfusionsText: String?
     var createdAt: Date = Date()
 
     // .cascade is not supported by CloudKit — SwiftData converts it to .nullify on remote.
@@ -20,16 +26,37 @@ final class RecallItem {
     @Relationship
     var collection: RecallCollection?
 
-    init(term: String, note: String? = nil) {
+    init(
+        term: String,
+        note: String? = nil,
+        keyFactsText: String? = nil,
+        acceptedSynonymsText: String? = nil,
+        commonConfusionsText: String? = nil
+    ) {
         self.id = UUID()
         self.term = term
         self.note = note
+        self.keyFactsText = keyFactsText
+        self.acceptedSynonymsText = acceptedSynonymsText
+        self.commonConfusionsText = commonConfusionsText
         self.createdAt = Date()
     }
 
     // MARK: - Computed
 
     var reviewCount: Int { (reviews ?? []).count }
+
+    var keyFacts: [String] {
+        rubricEntries(from: keyFactsText)
+    }
+
+    var acceptedSynonyms: [String] {
+        rubricEntries(from: acceptedSynonymsText)
+    }
+
+    var commonConfusions: [String] {
+        rubricEntries(from: commonConfusionsText)
+    }
 
     /// The date this item is next due for review.
     /// Items with no reviews return `Date.distantPast` (always due).
@@ -63,5 +90,14 @@ final class RecallItem {
 
         let days = Calendar.current.dateComponents([.day], from: now, to: nextDueDate).day ?? 1
         return .upcoming(days: max(1, days))
+    }
+
+    private func rubricEntries(from text: String?) -> [String] {
+        guard let text else { return [] }
+
+        return text
+            .split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
     }
 }

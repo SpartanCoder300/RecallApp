@@ -15,6 +15,9 @@ struct RecallSessionScreen: View {
     @State private var recalledText = ""
     @State private var revealedNote: String?
     @State private var hintText: String?
+    @State private var queuedRetryItemIDs = Set<UUID>()
+    @State private var deferredRetryItemIDs = Set<UUID>()
+    @State private var retryCountsByItemID: [UUID: Int] = [:]
     @State private var saveErrorMessage = ""
     @State private var showingSaveError = false
     @State private var showingExitConfirmation = false
@@ -97,6 +100,10 @@ struct RecallSessionScreen: View {
                     VStack(spacing: DT.Spacing.sm) {
                         progressBar
 
+                        if showsRetryBanner(for: currentItem) {
+                            retryBanner
+                        }
+
                         RecallCardView(
                             item: currentItem,
                             recalledText: $recalledText,
@@ -124,7 +131,13 @@ struct RecallSessionScreen: View {
                     .padding(.bottom, DT.Spacing.lg)
                     .safeAreaInset(edge: .bottom) {
                         if case .result(let result) = gradingState {
-                            AIGradingSuggestionView(result: result, onRate: rateCurrentItem)
+                            AIGradingSuggestionView(
+                                result: result,
+                                canRetryLater: queue.count > 1 && !deferredRetryItemIDs.contains(currentItem.id),
+                                onRate: rateCurrentItem,
+                                onRetryNow: retryCurrentItemNow,
+                                onRetryLater: deferCurrentItemForLater
+                            )
                         } else if shouldShowCheckButton {
                             checkAnswerBar
                         } else if case .failed = gradingState {
@@ -229,6 +242,20 @@ struct RecallSessionScreen: View {
             .progressViewStyle(.linear)
             .tint(DT.Color.accent)
             .padding(.top, DT.Spacing.xs)
+    }
+
+    private var retryBanner: some View {
+        Label(retryBannerText, systemImage: "arrow.clockwise")
+            .font(DT.Typography.footnote)
+            .foregroundStyle(DT.Color.accent)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(DT.Spacing.md)
+            .background(DT.Color.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: DT.Radius.md))
+            .overlay {
+                RoundedRectangle(cornerRadius: DT.Radius.md)
+                    .stroke(DT.Color.accent.opacity(0.22), lineWidth: 1)
+            }
+            .accessibilityLabel(retryBannerText)
     }
 
     private var sessionComplete: some View {
@@ -352,21 +379,66 @@ struct RecallSessionScreen: View {
         }
     }
 
+    private func retryCurrentItemNow() {
+        guard currentItem != nil else { return }
+
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            recalledText = ""
+            revealedNote = nil
+            hintText = nil
+            gradingState = .idle
+        }
+
+        HapticManager.selection()
+        DispatchQueue.main.async {
+            recallFieldFocused = true
+        }
+    }
+
+    private func deferCurrentItemForLater() {
+        guard let currentItem, queue.count > 1, !deferredRetryItemIDs.contains(currentItem.id) else { return }
+
+        lastUndoAction = .deferRetry(
+            item: currentItem,
+            cardState: currentCardState
+        )
+
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            deferredRetryItemIDs.insert(currentItem.id)
+            queue.removeFirst()
+            queue.append(currentItem)
+            resetCardState()
+        }
+
+        HapticManager.warning()
+    }
+
     private func rateCurrentItem(_ rating: Rating) {
         guard let currentItem else { return }
 
         let trimmedRecall = recalledText.trimmingCharacters(in: .whitespacesAndNewlines)
         let previousCardState = currentCardState
+        let gradingResult = currentGradingResult
+        let wasQueuedForRetry = queuedRetryItemIDs.contains(currentItem.id)
+        let wasDeferredForRetry = deferredRetryItemIDs.contains(currentItem.id)
+        let didScheduleRetry = shouldQueueRetry(for: currentItem, rating: rating, gradingResult: gradingResult)
         let sessionResult = SessionResult(item: currentItem, rating: rating)
         let review = Review(
             rating: rating,
             recalledText: trimmedRecall.isEmpty ? nil : trimmedRecall
         )
         review.item = currentItem
-        if case .result(let gradingResult) = gradingState {
+        if let gradingResult {
             review.gradingReasoning = gradingResult.reasoning
             review.wasAIGraded = true
             review.aiSuggestedRating = gradingResult.suggestedRating.rawValue
+            review.aiPrimaryFeedbackCategory = gradingResult.primaryFeedbackCategory
+            review.aiSecondaryFeedbackCategory = gradingResult.secondaryFeedbackCategory
+            review.aiCoreIdeaCorrect = gradingResult.coreIdeaCorrect
+            review.aiMissingConcepts = gradingResult.missingConcepts
+            review.aiIncorrectClaims = gradingResult.incorrectClaims
+            review.aiConfidence = gradingResult.confidence
+            review.aiShouldResurfaceSoon = gradingResult.shouldResurfaceSoon
         }
 
         if let onRatePreview {
@@ -376,10 +448,15 @@ struct RecallSessionScreen: View {
                 item: currentItem,
                 result: sessionResult,
                 review: nil,
-                cardState: previousCardState
+                cardState: previousCardState,
+                didScheduleRetry: didScheduleRetry,
+                wasQueuedForRetry: wasQueuedForRetry,
+                wasDeferredForRetry: wasDeferredForRetry
             )
 
             withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                applyRetryDecision(for: currentItem, shouldScheduleRetry: didScheduleRetry, wasQueuedForRetry: wasQueuedForRetry)
+                deferredRetryItemIDs.remove(currentItem.id)
                 results.append(sessionResult)
                 queue.removeFirst()
                 completedCount += 1
@@ -409,10 +486,15 @@ struct RecallSessionScreen: View {
             item: currentItem,
             result: sessionResult,
             review: review,
-            cardState: previousCardState
+            cardState: previousCardState,
+            didScheduleRetry: didScheduleRetry,
+            wasQueuedForRetry: wasQueuedForRetry,
+            wasDeferredForRetry: wasDeferredForRetry
         )
 
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            applyRetryDecision(for: currentItem, shouldScheduleRetry: didScheduleRetry, wasQueuedForRetry: wasQueuedForRetry)
+            deferredRetryItemIDs.remove(currentItem.id)
             results.append(sessionResult)
             queue.removeFirst()
             completedCount += 1
@@ -441,7 +523,19 @@ struct RecallSessionScreen: View {
                 self.lastUndoAction = nil
             }
 
-        case .rate(let item, let result, let review, let cardState):
+        case .deferRetry(let item, let cardState):
+            if let deferredIndex = queue.lastIndex(where: { $0.id == item.id }) {
+                queue.remove(at: deferredIndex)
+            }
+
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                deferredRetryItemIDs.remove(item.id)
+                queue.insert(item, at: 0)
+                restoreCardState(cardState)
+                self.lastUndoAction = nil
+            }
+
+        case .rate(let item, let result, let review, let cardState, let didScheduleRetry, let wasQueuedForRetry, let wasDeferredForRetry):
             if let review {
                 if let index = item.reviews?.firstIndex(where: { $0 === review }) {
                     item.reviews?.remove(at: index)
@@ -450,6 +544,14 @@ struct RecallSessionScreen: View {
             }
 
             withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                revertRetryDecision(
+                    for: item,
+                    didScheduleRetry: didScheduleRetry,
+                    wasQueuedForRetry: wasQueuedForRetry
+                )
+                if wasDeferredForRetry {
+                    deferredRetryItemIDs.insert(item.id)
+                }
                 if let lastResult = results.last, lastResult.id == result.id {
                     results.removeLast()
                 }
@@ -491,6 +593,9 @@ struct RecallSessionScreen: View {
                 recalledText: recalledText,
                 term: currentItem.term,
                 note: currentItem.note,
+                keyFacts: currentItem.keyFacts,
+                acceptedSynonyms: currentItem.acceptedSynonyms,
+                commonConfusions: currentItem.commonConfusions,
                 collectionName: currentItem.collection?.name
             )
             withAnimation { gradingState = .result(result) }
@@ -507,6 +612,72 @@ struct RecallSessionScreen: View {
         } else {
             dismiss()
         }
+    }
+
+    private func shouldQueueRetry(
+        for item: RecallItem,
+        rating: Rating,
+        gradingResult: GradingResult?
+    ) -> Bool {
+        guard retryCountsByItemID[item.id, default: 0] == 0 else { return false }
+
+        switch rating {
+        case .forgot:
+            return true
+        case .hard:
+            return gradingResult?.shouldResurfaceSoon ?? true
+        case .easy:
+            return false
+        }
+    }
+
+    private func applyRetryDecision(
+        for item: RecallItem,
+        shouldScheduleRetry: Bool,
+        wasQueuedForRetry: Bool
+    ) {
+        if shouldScheduleRetry {
+            retryCountsByItemID[item.id, default: 0] += 1
+            queuedRetryItemIDs.insert(item.id)
+            queue.append(item)
+            HapticManager.warning()
+        } else if wasQueuedForRetry {
+            queuedRetryItemIDs.remove(item.id)
+        }
+    }
+
+    private func revertRetryDecision(
+        for item: RecallItem,
+        didScheduleRetry: Bool,
+        wasQueuedForRetry: Bool
+    ) {
+        if didScheduleRetry {
+            if let retryIndex = queue.lastIndex(where: { $0.id == item.id }) {
+                queue.remove(at: retryIndex)
+            }
+
+            let remaining = max(0, retryCountsByItemID[item.id, default: 0] - 1)
+            if remaining == 0 {
+                retryCountsByItemID.removeValue(forKey: item.id)
+                queuedRetryItemIDs.remove(item.id)
+            } else {
+                retryCountsByItemID[item.id] = remaining
+                queuedRetryItemIDs.insert(item.id)
+            }
+        } else if wasQueuedForRetry {
+            queuedRetryItemIDs.insert(item.id)
+        }
+    }
+
+    private func showsRetryBanner(for item: RecallItem) -> Bool {
+        deferredRetryItemIDs.contains(item.id) || queuedRetryItemIDs.contains(item.id)
+    }
+
+    private var retryBannerText: String {
+        if let currentItem, deferredRetryItemIDs.contains(currentItem.id) {
+            return "Corrective follow-up: rewrite this one with the missing distinction in mind."
+        }
+        return "Quick retry: tighten the missing detail before this leaves today’s session."
     }
 }
 
@@ -531,7 +702,16 @@ private struct RecallCardState {
 
 private enum SessionUndoAction {
     case skip(item: RecallItem, cardState: RecallCardState)
-    case rate(item: RecallItem, result: SessionResult, review: Review?, cardState: RecallCardState)
+    case deferRetry(item: RecallItem, cardState: RecallCardState)
+    case rate(
+        item: RecallItem,
+        result: SessionResult,
+        review: Review?,
+        cardState: RecallCardState,
+        didScheduleRetry: Bool,
+        wasQueuedForRetry: Bool,
+        wasDeferredForRetry: Bool
+    )
 }
 
 struct SessionResult: Identifiable {
@@ -569,7 +749,7 @@ private struct RecallCardView: View {
                     yourAnswerCard(text: recalledText)
                         .transition(.opacity)
                         .padding(.bottom, DT.Spacing.xs)
-                    AIReasoningCard(result: gradingResult)
+                    AIReasoningCard(result: gradingResult, commonConfusions: item.commonConfusions)
                         .transition(.opacity)
 
                     if let revealedNote {
@@ -887,6 +1067,7 @@ private struct CelebrationBurstView: View {
 
 struct AIReasoningCard: View {
     let result: GradingResult
+    let commonConfusions: [String]
 
     var body: some View {
         VStack(alignment: .leading, spacing: DT.Spacing.md) {
@@ -919,6 +1100,43 @@ struct AIReasoningCard: View {
                 .foregroundStyle(DT.Color.textPrimary)
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: DT.Spacing.sm) {
+                HStack(spacing: DT.Spacing.sm) {
+                    feedbackChip(result.primaryFeedbackCategory.title)
+
+                    if let secondaryFeedbackCategory = result.secondaryFeedbackCategory {
+                        feedbackChip(secondaryFeedbackCategory.title)
+                    }
+                }
+
+                metadataRow(
+                    title: feedbackHeadline.title,
+                    value: feedbackHeadline.value
+                )
+
+                if let missingConcepts = result.missingConcepts {
+                    metadataRow(title: "You omitted", value: missingConcepts)
+                }
+
+                if let incorrectClaims = result.incorrectClaims {
+                    metadataRow(title: "You confused", value: incorrectClaims)
+                }
+
+                metadataRow(title: "Confidence", value: result.confidence.rawValue)
+
+                if result.shouldResurfaceSoon {
+                    metadataRow(title: "Follow-up", value: "A Hard or Forgot rating brings this back once more today")
+                }
+
+                if let distinction = distinctionText {
+                    metadataRow(title: "Missed distinction", value: distinction)
+                }
+
+                if let comparison = comparisonText {
+                    metadataRow(title: "Watch this confusion", value: comparison)
+                }
+            }
         }
         .padding(DT.Spacing.md)
         .background(DT.Color.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: DT.Radius.lg))
@@ -927,7 +1145,76 @@ struct AIReasoningCard: View {
                 .stroke(DT.Color.accent.opacity(0.3), lineWidth: 1)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("AI grading suggested \(result.suggestedRating.rawValue). \(result.reasoning)")
+        .accessibilityLabel(accessibilitySummary)
+    }
+
+    private func metadataRow(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(DT.Typography.caption)
+                .foregroundStyle(DT.Color.textSecondary)
+
+            Text(value)
+                .font(DT.Typography.subheadline)
+                .foregroundStyle(DT.Color.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func feedbackChip(_ title: String) -> some View {
+        Text(title)
+            .font(DT.Typography.caption)
+            .foregroundStyle(DT.Color.accent)
+            .padding(.horizontal, DT.Spacing.sm)
+            .padding(.vertical, DT.Spacing.xs)
+            .background(DT.Color.accent.opacity(0.12), in: Capsule())
+    }
+
+    private var accessibilitySummary: String {
+        var parts = [
+            "AI grading suggested \(result.suggestedRating.rawValue).",
+            result.reasoning,
+            "\(result.primaryFeedbackCategory.title).",
+            result.coreIdeaCorrect ? "Core idea captured." : "Core idea missing.",
+            "Confidence \(result.confidence.rawValue)."
+        ]
+
+        if let secondaryFeedbackCategory = result.secondaryFeedbackCategory {
+            parts.append("\(secondaryFeedbackCategory.title).")
+        }
+
+        if let missingConcepts = result.missingConcepts {
+            parts.append("Missing \(missingConcepts).")
+        }
+
+        if let incorrectClaims = result.incorrectClaims {
+            parts.append("Incorrect \(incorrectClaims).")
+        }
+
+        if result.shouldResurfaceSoon {
+            parts.append("A hard or forgot rating brings this back once more today.")
+        }
+
+        if let distinction = distinctionText {
+            parts.append("Missed distinction \(distinction).")
+        }
+
+        if let comparison = comparisonText {
+            parts.append("Watch this confusion \(comparison).")
+        }
+
+        return parts.joined(separator: " ")
+    }
+
+    private var distinctionText: String? {
+        result.incorrectClaims ?? result.missingConcepts
+    }
+
+    private var comparisonText: String? {
+        guard !commonConfusions.isEmpty, result.incorrectClaims != nil || result.missingConcepts != nil else {
+            return nil
+        }
+        return commonConfusions.prefix(2).joined(separator: " • ")
     }
 
     private var ratingTint: Color {
@@ -940,23 +1227,64 @@ struct AIReasoningCard: View {
             DT.Color.accent
         }
     }
+
+    private var feedbackHeadline: (title: String, value: String) {
+        switch result.primaryFeedbackCategory {
+        case .mainIdeaCaptured:
+            return ("You got the main idea", result.reasoning)
+        case .causalMechanismMissing:
+            return ("You missed the causal mechanism", result.missingConcepts ?? result.reasoning)
+        case .confusedConcepts:
+            return ("You confused this with something else", result.incorrectClaims ?? result.reasoning)
+        case .exceptionOmitted:
+            return ("You omitted the exception", result.missingConcepts ?? result.reasoning)
+        case .importantQualifierMissing:
+            return ("You missed the qualifier", result.missingConcepts ?? result.reasoning)
+        case .criticalDetailMissing:
+            return ("You missed a critical detail", result.missingConcepts ?? result.reasoning)
+        }
+    }
 }
 
 struct AIGradingSuggestionView: View {
     let result: GradingResult
+    let canRetryLater: Bool
     let onRate: (Rating) -> Void
+    let onRetryNow: () -> Void
+    let onRetryLater: () -> Void
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: DT.Spacing.sm) {
-            ratingButton(.forgot, label: "Forgot", tint: DT.Color.destructive)
-            ratingButton(.hard,   label: "Hard",   tint: DT.Color.caution)
-            ratingButton(.easy,   label: "Easy",   tint: DT.Color.accent)
+        VStack(spacing: DT.Spacing.sm) {
+            HStack(alignment: .bottom, spacing: DT.Spacing.sm) {
+                ratingButton(.forgot, label: "Forgot", tint: DT.Color.destructive)
+                ratingButton(.hard,   label: "Hard",   tint: DT.Color.caution)
+                ratingButton(.easy,   label: "Easy",   tint: DT.Color.accent)
+            }
+
+            correctiveActions
         }
         .padding(.horizontal, DT.Spacing.lg)
         .padding(.top, DT.Spacing.sm)
         .padding(.bottom, DT.Spacing.sm)
         .background(DT.Color.background)
         .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+
+    private var correctiveActions: some View {
+        HStack(spacing: DT.Spacing.sm) {
+            Button("Retry Now", action: onRetryNow)
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel("Retry now")
+
+            Button("Retry Later", action: onRetryLater)
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+                .frame(maxWidth: .infinity)
+                .disabled(!canRetryLater)
+                .accessibilityLabel("Retry later in this session")
+        }
     }
 
     @ViewBuilder

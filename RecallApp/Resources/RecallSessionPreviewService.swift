@@ -31,7 +31,14 @@ enum RecallSessionPreviewService {
 
     static let aiResponseResult = GradingResult(
         suggestedRating: .hard,
-        reasoning: "You got the gist but missed the key detail that delivery is at most once with no retry."
+        reasoning: "You got the main idea but missed that delivery is at most once with no acknowledgment or retry.",
+        primaryFeedbackCategory: .importantQualifierMissing,
+        secondaryFeedbackCategory: .mainIdeaCaptured,
+        coreIdeaCorrect: true,
+        missingConcepts: "No acknowledgment or retry",
+        incorrectClaims: nil,
+        confidence: .high,
+        shouldResurfaceSoon: true
     )
 
     static let liveSessionConfiguration = RecallSessionPreviewConfiguration(

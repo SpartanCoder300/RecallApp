@@ -22,7 +22,13 @@ enum PreviewService {
     )
 
     static let itemWithNote: RecallItem = {
-        RecallItem(term: "Hippocampus", note: "Memory consolidation")
+        RecallItem(
+            term: "Hippocampus",
+            note: "Memory consolidation",
+            keyFactsText: "Encodes episodic memory\nSupports consolidation",
+            acceptedSynonymsText: "Memory formation",
+            commonConfusionsText: "Stores all memories permanently"
+        )
     }()
 
     static let itemWithoutNote: RecallItem = {
@@ -32,7 +38,10 @@ enum PreviewService {
     static let itemDetail: RecallItem = {
         let item = RecallItem(
             term: "Hippocampus",
-            note: "Encodes and consolidates episodic memory."
+            note: "Encodes and consolidates episodic memory.",
+            keyFactsText: "Encodes new episodic memories\nSupports consolidation into long-term memory",
+            acceptedSynonymsText: "Declarative memory formation",
+            commonConfusionsText: "Primary motor control center\nPermanent storage location for every memory"
         )
         item.createdAt = Calendar.current.date(byAdding: .day, value: -12, to: Date()) ?? Date()
 
@@ -55,13 +64,16 @@ enum PreviewService {
     private static let sampleItems: [RecallItem] = {
         let todayNew = RecallItem(
             term: "System Design",
-            note: "How to approach scalable architecture questions"
+            note: "How to approach scalable architecture questions",
+            keyFactsText: "Clarify requirements\nIdentify bottlenecks\nDiscuss trade-offs"
         )
         todayNew.createdAt = Date()
 
         let todayDue = RecallItem(
             term: "CAP Theorem",
-            note: "Consistency, Availability, Partition tolerance trade-off"
+            note: "Consistency, Availability, Partition tolerance trade-off",
+            keyFactsText: "Network partition is the forcing condition\nCannot guarantee both consistency and availability during a partition",
+            commonConfusionsText: "You can always have all three\nCAP is about normal operation without partitions"
         )
         todayDue.createdAt = Date()
         let todayReview = Review(rating: .hard)
@@ -71,7 +83,10 @@ enum PreviewService {
 
         let olderDue = RecallItem(
             term: "MQTT Protocol",
-            note: "Lightweight pub/sub messaging for constrained devices"
+            note: "Lightweight pub/sub messaging for constrained devices",
+            keyFactsText: "Publish/subscribe model\nDesigned for constrained devices and unreliable networks",
+            acceptedSynonymsText: "Lightweight messaging protocol",
+            commonConfusionsText: "Request-response protocol like REST"
         )
         olderDue.createdAt = Calendar.current.date(byAdding: .day, value: -3, to: Date()) ?? Date()
         let olderReview = Review(rating: .forgot)
@@ -81,7 +96,8 @@ enum PreviewService {
 
         let mastered = RecallItem(
             term: "Action Potential",
-            note: "Electrical impulse that travels along a neuron"
+            note: "Electrical impulse that travels along a neuron",
+            keyFactsText: "All-or-none electrical signal\nTravels along the neuron membrane"
         )
         mastered.createdAt = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
         var masteredReviews: [Review] = []

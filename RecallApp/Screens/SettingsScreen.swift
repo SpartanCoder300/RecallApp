@@ -91,6 +91,18 @@ struct SettingsScreen: View {
                         .accessibilityHint("Opens the upgrade screen")
                     }
                 }
+
+#if DEBUG
+                Section("Internal Tools") {
+                    NavigationLink {
+                        AIEvaluationScreen()
+                    } label: {
+                        Label("AI Evaluation Lab", systemImage: "chart.bar.doc.horizontal")
+                    }
+                    .accessibilityLabel("AI Evaluation Lab")
+                    .accessibilityHint("Opens the internal AI grading benchmark screen")
+                }
+#endif
                 
                 Section {
                 } footer: {

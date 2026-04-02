@@ -1,15 +1,6 @@
 import Foundation
 import FoundationModels
 
-// MARK: - GradingResult
-
-/// The output of an AI grading pass for a single review attempt.
-struct GradingResult {
-    let suggestedRating: Rating
-    /// A short explanation of why that rating was suggested, shown to the user.
-    let reasoning: String
-}
-
 // MARK: - Generable response type
 
 /// Internal structured output type consumed by the Foundation Models session.
@@ -20,8 +11,36 @@ private struct GradingResponse {
     var rating: String
 
     /// Exactly one concise sentence explaining the rating to the user.
-    @Guide(description: "Exactly one concise sentence, 18 words max. Focus on whether the user captured the core idea and any important missing detail. Do not rewrite the full answer. Address the user directly.")
+    @Guide(description: "Exactly one concise sentence, 18 words max. Use the feedback categories to give specific coaching. Do not rewrite the full answer. Address the user directly.")
     var reasoning: String
+
+    /// The main category of feedback to show the user.
+    @Guide(description: "One of: Main Idea Captured, Causal Mechanism Missing, Confused Concepts, Exception Omitted, Important Qualifier Missing, Critical Detail Missing")
+    var primaryFeedbackCategory: String
+
+    /// Optional secondary category of feedback.
+    @Guide(description: "One of: Main Idea Captured, Causal Mechanism Missing, Confused Concepts, Exception Omitted, Important Qualifier Missing, Critical Detail Missing. Empty string if none.")
+    var secondaryFeedbackCategory: String
+
+    /// Whether the main concept was recalled correctly.
+    @Guide(description: "True if the user's answer captures the main concept. False otherwise.")
+    var coreIdeaCorrect: Bool
+
+    /// Missing ideas that prevented a stronger score.
+    @Guide(description: "A short phrase naming the most important missing concept or detail. Empty string if nothing important is missing.")
+    var missingConcepts: String
+
+    /// Incorrect claims that should be corrected.
+    @Guide(description: "A short phrase naming the most important wrong claim or confusion. Empty string if nothing meaningfully incorrect was stated.")
+    var incorrectClaims: String
+
+    /// Confidence in the grading judgment.
+    @Guide(description: "One of: Low, Medium, High")
+    var confidence: String
+
+    /// Whether the item should be reviewed again soon because the answer was weak or unstable.
+    @Guide(description: "True when the answer suggests this item should come back soon. False when the answer looks stable.")
+    var shouldResurfaceSoon: Bool
 }
 
 // MARK: - AnswerGradingService
@@ -40,6 +59,10 @@ enum AnswerGradingService {
         case modelUnavailable
         /// The model returned a rating string that doesn't map to a known Rating.
         case invalidRatingResponse(String)
+        /// The model returned a confidence string that doesn't map to a known confidence level.
+        case invalidConfidenceResponse(String)
+        /// The model returned a feedback category string that doesn't map to a known category.
+        case invalidFeedbackCategoryResponse(String)
     }
 
     // MARK: Public API
@@ -59,11 +82,24 @@ enum AnswerGradingService {
         recalledText: String,
         term: String,
         note: String?,
+        keyFacts: [String] = [],
+        acceptedSynonyms: [String] = [],
+        commonConfusions: [String] = [],
         collectionName: String? = nil
     ) async throws -> GradingResult {
         // Fast path: empty input is always Forgot — no model call needed.
         guard !recalledText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return GradingResult(suggestedRating: .forgot, reasoning: "You didn't enter a response.")
+            return GradingResult(
+                suggestedRating: .forgot,
+                reasoning: "You didn't enter a response.",
+                primaryFeedbackCategory: .criticalDetailMissing,
+                secondaryFeedbackCategory: nil,
+                coreIdeaCorrect: false,
+                missingConcepts: "No recall attempt",
+                incorrectClaims: nil,
+                confidence: .high,
+                shouldResurfaceSoon: true
+            )
         }
 
         let model = SystemLanguageModel.default
@@ -73,74 +109,93 @@ enum AnswerGradingService {
         }
 
         let session = LanguageModelSession(model: model)
-        let prompt = buildPrompt(recalledText: recalledText, term: term, note: note, collectionName: collectionName)
+        let prompt = AnswerGradingPromptBuilder.buildPrompt(
+            recalledText: recalledText,
+            term: term,
+            note: note,
+            keyFacts: keyFacts,
+            acceptedSynonyms: acceptedSynonyms,
+            commonConfusions: commonConfusions,
+            collectionName: collectionName
+        )
 
         let response = try await session.respond(
             to: prompt,
             generating: GradingResponse.self
         )
 
-        guard let rating = Rating(rawValue: response.content.rating) else {
+        guard let rating = parsedRating(from: response.content.rating) else {
             throw GradingError.invalidRatingResponse(response.content.rating)
         }
 
-        return GradingResult(suggestedRating: rating, reasoning: response.content.reasoning)
+        guard let confidence = parsedConfidence(from: response.content.confidence) else {
+            throw GradingError.invalidConfidenceResponse(response.content.confidence)
+        }
+
+        guard let primaryFeedbackCategory = parsedFeedbackCategory(from: response.content.primaryFeedbackCategory) else {
+            throw GradingError.invalidFeedbackCategoryResponse(response.content.primaryFeedbackCategory)
+        }
+
+        let secondaryFeedbackCategory = AnswerGradingPromptBuilder.normalized(response.content.secondaryFeedbackCategory)
+            .flatMap(parsedFeedbackCategory(from:))
+
+        if let secondaryCategoryText = AnswerGradingPromptBuilder.normalized(response.content.secondaryFeedbackCategory),
+           secondaryFeedbackCategory == nil {
+            throw GradingError.invalidFeedbackCategoryResponse(secondaryCategoryText)
+        }
+
+        return GradingResult(
+            suggestedRating: rating,
+            reasoning: response.content.reasoning,
+            primaryFeedbackCategory: primaryFeedbackCategory,
+            secondaryFeedbackCategory: secondaryFeedbackCategory,
+            coreIdeaCorrect: response.content.coreIdeaCorrect,
+            missingConcepts: AnswerGradingPromptBuilder.normalized(response.content.missingConcepts),
+            incorrectClaims: AnswerGradingPromptBuilder.normalized(response.content.incorrectClaims),
+            confidence: confidence,
+            shouldResurfaceSoon: response.content.shouldResurfaceSoon
+        )
     }
 
-    // MARK: Prompt Construction
+    private static func parsedRating(from rawValue: String) -> Rating? {
+        let normalized = canonicalized(rawValue)
+        return Rating.allCases.first { canonicalized($0.rawValue) == normalized }
+    }
 
-    private static func buildPrompt(
-        recalledText: String,
-        term: String,
-        note: String?,
-        collectionName: String?
-    ) -> String {
-        let domainLine = collectionName.map { "Subject area: \($0)\n" } ?? ""
-        let ratingCriteria = """
-            - Forgot: The core idea is missing, meaningfully wrong, or shows no real understanding.
-            - Hard: The core idea is mostly there, but one or more important details, distinctions, or qualifiers are missing or wrong.
-            - Easy: The core idea is correct and the important details are present. Minor wording differences, paraphrasing, or different phrasing are fine.
-            """
-        let outputRules = """
-            Return:
-            - rating: Forgot, Hard, or Easy
-            - reasoning: exactly one sentence, 18 words max, saying whether the user got the core idea and what important detail was missing, if any
+    private static func parsedConfidence(from rawValue: String) -> GradingConfidence? {
+        let normalized = canonicalized(rawValue)
+        return GradingConfidence.allCases.first { canonicalized($0.rawValue) == normalized }
+    }
 
-            Do not rewrite the full correct answer. Do not provide a full corrected response. Do not use more than one sentence. Do not add encouragement, hedging, or extra commentary. Address the user directly.
-            """
+    private static func parsedFeedbackCategory(from rawValue: String) -> FeedbackCategory? {
+        let normalized = canonicalized(rawValue)
 
-        if let note, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return """
-            You are grading a spaced-repetition flashcard recall attempt.
-
-            \(domainLine)Card term: \(term)
-            Correct answer: \(note)
-            User's answer: \(recalledText)
-
-            Grade based on meaning, not wording. Do not expect the user's answer to match the stored answer textually.
-            First decide whether the user captured the core idea. Then decide whether any important details were missing.
-
-            Rate how well the user's answer matches the correct answer:
-            \(ratingCriteria)
-
-            \(outputRules)
-            """
-        } else {
-            return """
-            You are grading a spaced-repetition flashcard recall attempt.
-
-            \(domainLine)Card term: \(term)
-            (No stored answer — use your general knowledge to evaluate correctness.)
-            User's answer: \(recalledText)
-
-            Grade based on meaning, not wording. Do not expect the user's answer to match a textbook phrasing.
-            First decide whether the user captured the core idea. Then decide whether any important details were missing.
-
-            Based on what a correct answer for "\(term)" would typically be, rate the user's response:
-            \(ratingCriteria)
-
-            \(outputRules)
-            """
+        if let exactMatch = FeedbackCategory.allCases.first(where: { canonicalized($0.rawValue) == normalized }) {
+            return exactMatch
         }
+
+        switch normalized {
+        case "mainidea", "mainideacorrect", "mainidearight", "coreideacaptured", "coreideacorrect":
+            return .mainIdeaCaptured
+        case "causalmechanism", "mechanismmissing", "causalmissing", "processmissing", "howmissing":
+            return .causalMechanismMissing
+        case "confusedconcept", "conceptconfusion", "mixedconcepts", "conceptsmixedup":
+            return .confusedConcepts
+        case "exceptionmissing", "exceptionomitted", "boundaryconditionmissing":
+            return .exceptionOmitted
+        case "importantqualifier", "qualifiermissing", "missingqualifier", "conditionmissing":
+            return .importantQualifierMissing
+        case "criticaldetail", "detailmissing", "missingdetail", "keydetailmissing":
+            return .criticalDetailMissing
+        default:
+            return nil
+        }
+    }
+
+    private static func canonicalized(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "[^a-z]", with: "", options: .regularExpression)
     }
 }
