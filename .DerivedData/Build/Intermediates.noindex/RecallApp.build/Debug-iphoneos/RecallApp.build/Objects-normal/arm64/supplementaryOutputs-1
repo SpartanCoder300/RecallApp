@@ -1,0 +1,30 @@
+{
+  "/Users/garrettspencer/Developer/projects/RecallApp/RecallApp/Components/ItemRow.swift" : {
+    "const-values" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ItemRow.swiftconstvalues",
+    "dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ItemRow.d",
+    "diagnostics" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ItemRow.dia",
+    "object" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ItemRow.o",
+    "swift-dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ItemRow.swiftdeps"
+  },
+  "/Users/garrettspencer/Developer/projects/RecallApp/RecallApp/Components/StatCard.swift" : {
+    "const-values" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/StatCard.swiftconstvalues",
+    "dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/StatCard.d",
+    "diagnostics" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/StatCard.dia",
+    "object" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/StatCard.o",
+    "swift-dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/StatCard.swiftdeps"
+  },
+  "/Users/garrettspencer/Developer/projects/RecallApp/RecallApp/Models/ItemStatus.swift" : {
+    "const-values" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ItemStatus.swiftconstvalues",
+    "dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ItemStatus.d",
+    "diagnostics" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ItemStatus.dia",
+    "object" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ItemStatus.o",
+    "swift-dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ItemStatus.swiftdeps"
+  },
+  "/Users/garrettspencer/Developer/projects/RecallApp/RecallApp/Models/Rating.swift" : {
+    "const-values" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/Rating.swiftconstvalues",
+    "dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/Rating.d",
+    "diagnostics" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/Rating.dia",
+    "object" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/Rating.o",
+    "swift-dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/Rating.swiftdeps"
+  }
+}

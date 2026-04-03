@@ -1,0 +1,23 @@
+{
+  "/Users/garrettspencer/Developer/projects/RecallApp/RecallApp/ContentView.swift" : {
+    "const-values" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ContentView.swiftconstvalues",
+    "dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ContentView.d",
+    "diagnostics" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ContentView.dia",
+    "object" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ContentView.o",
+    "swift-dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ContentView.swiftdeps"
+  },
+  "/Users/garrettspencer/Developer/projects/RecallApp/RecallApp/Services/ReminderManager.swift" : {
+    "const-values" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ReminderManager.swiftconstvalues",
+    "dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ReminderManager.d",
+    "diagnostics" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ReminderManager.dia",
+    "object" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ReminderManager.o",
+    "swift-dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ReminderManager.swiftdeps"
+  },
+  "/Users/garrettspencer/Developer/projects/RecallApp/RecallApp/Services/SchedulingEngine.swift" : {
+    "const-values" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/SchedulingEngine.swiftconstvalues",
+    "dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/SchedulingEngine.d",
+    "diagnostics" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/SchedulingEngine.dia",
+    "object" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/SchedulingEngine.o",
+    "swift-dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/SchedulingEngine.swiftdeps"
+  }
+}

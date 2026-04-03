@@ -5,12 +5,9 @@ struct SettingsScreen: View {
     @AppStorage(AppSettings.reviewReminderHourKey) private var reviewReminderHour = 21
     @AppStorage(AppSettings.reviewReminderMinuteKey) private var reviewReminderMinute = 0
     @AppStorage(AppSettings.reviewCadenceKey) private var reviewCadenceRawValue = ReviewCadence.standard.rawValue
-    @AppStorage(AppSettings.isProUserKey) private var isProUser = false
-    @AppStorage(AppSettings.aiGradingEnabledKey) private var aiGradingEnabled = true
 
     @State private var showingReminderError = false
     @State private var reminderErrorMessage = ""
-    @State private var showingProUpgrade = false
 
     private var reviewTime: Binding<Date> {
         Binding {
@@ -72,38 +69,12 @@ struct SettingsScreen: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Section("Daily Recall Pro") {
-                    if isProUser {
-                        Toggle("AI Answer Grading", isOn: $aiGradingEnabled)
-                        Text("On-device AI grades your answers and suggests a rating.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Button {
-                            showingProUpgrade = true
-                        } label: {
-                            HStack {
-                                Image(systemName: "sparkles")
-                                Text("Unlock Daily Recall Pro")
-                            }
-                        }
-                        .accessibilityLabel("Unlock Daily Recall Pro")
-                        .accessibilityHint("Opens the upgrade screen")
-                    }
+                Section("AI Answers") {
+                    Text("Reveal uses on-device AI to generate one cached answer for a card. It’s available to every user.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
 
-#if DEBUG
-                Section("Internal Tools") {
-                    NavigationLink {
-                        AIEvaluationScreen()
-                    } label: {
-                        Label("AI Evaluation Lab", systemImage: "chart.bar.doc.horizontal")
-                    }
-                    .accessibilityLabel("AI Evaluation Lab")
-                    .accessibilityHint("Opens the internal AI grading benchmark screen")
-                }
-#endif
-                
                 Section {
                 } footer: {
                     Text(appVersionText)
@@ -112,9 +83,6 @@ struct SettingsScreen: View {
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
-            .sheet(isPresented: $showingProUpgrade) {
-                ProUpgradeSheet(isPresented: $showingProUpgrade)
-            }
             .formStyle(.grouped)
             .alert("Notifications Unavailable", isPresented: $showingReminderError) {
                 Button("OK", role: .cancel) { }

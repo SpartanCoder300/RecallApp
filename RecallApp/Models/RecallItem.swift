@@ -9,12 +9,8 @@ final class RecallItem {
     var term: String = ""
     /// Optional hint shown during recall if the user asks for help.
     var note: String?
-    /// Canonical facts the user should include for a strong answer.
-    var keyFactsText: String?
-    /// Alternate terms or phrasings that should still count as correct.
-    var acceptedSynonymsText: String?
-    /// Common confusions the grader should watch for.
-    var commonConfusionsText: String?
+    /// Cached on-device AI answer shown after reveal.
+    var cachedAIAnswerText: String?
     var createdAt: Date = Date()
 
     // .cascade is not supported by CloudKit — SwiftData converts it to .nullify on remote.
@@ -29,16 +25,12 @@ final class RecallItem {
     init(
         term: String,
         note: String? = nil,
-        keyFactsText: String? = nil,
-        acceptedSynonymsText: String? = nil,
-        commonConfusionsText: String? = nil
+        cachedAIAnswerText: String? = nil
     ) {
         self.id = UUID()
         self.term = term
         self.note = note
-        self.keyFactsText = keyFactsText
-        self.acceptedSynonymsText = acceptedSynonymsText
-        self.commonConfusionsText = commonConfusionsText
+        self.cachedAIAnswerText = cachedAIAnswerText
         self.createdAt = Date()
     }
 
@@ -46,16 +38,10 @@ final class RecallItem {
 
     var reviewCount: Int { (reviews ?? []).count }
 
-    var keyFacts: [String] {
-        rubricEntries(from: keyFactsText)
-    }
-
-    var acceptedSynonyms: [String] {
-        rubricEntries(from: acceptedSynonymsText)
-    }
-
-    var commonConfusions: [String] {
-        rubricEntries(from: commonConfusionsText)
+    var cachedAIAnswer: String? {
+        let trimmed = cachedAIAnswerText?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let trimmed, !trimmed.isEmpty else { return nil }
+        return trimmed
     }
 
     /// The date this item is next due for review.
@@ -90,14 +76,5 @@ final class RecallItem {
 
         let days = Calendar.current.dateComponents([.day], from: now, to: nextDueDate).day ?? 1
         return .upcoming(days: max(1, days))
-    }
-
-    private func rubricEntries(from text: String?) -> [String] {
-        guard let text else { return [] }
-
-        return text
-            .split(whereSeparator: \.isNewline)
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
     }
 }

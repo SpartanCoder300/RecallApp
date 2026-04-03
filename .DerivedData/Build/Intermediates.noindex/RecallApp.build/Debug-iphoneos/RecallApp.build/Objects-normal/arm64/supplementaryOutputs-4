@@ -1,0 +1,23 @@
+{
+  "/Users/garrettspencer/Developer/projects/RecallApp/RecallApp/Screens/HomeScreen.swift" : {
+    "const-values" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/HomeScreen.swiftconstvalues",
+    "dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/HomeScreen.d",
+    "diagnostics" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/HomeScreen.dia",
+    "object" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/HomeScreen.o",
+    "swift-dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/HomeScreen.swiftdeps"
+  },
+  "/Users/garrettspencer/Developer/projects/RecallApp/RecallApp/Screens/ItemDetailScreen.swift" : {
+    "const-values" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ItemDetailScreen.swiftconstvalues",
+    "dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ItemDetailScreen.d",
+    "diagnostics" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ItemDetailScreen.dia",
+    "object" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ItemDetailScreen.o",
+    "swift-dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/ItemDetailScreen.swiftdeps"
+  },
+  "/Users/garrettspencer/Developer/projects/RecallApp/RecallApp/Screens/LibraryScreen.swift" : {
+    "const-values" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/LibraryScreen.swiftconstvalues",
+    "dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/LibraryScreen.d",
+    "diagnostics" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/LibraryScreen.dia",
+    "object" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/LibraryScreen.o",
+    "swift-dependencies" : "/Users/garrettspencer/Developer/projects/RecallApp/.DerivedData/Build/Intermediates.noindex/RecallApp.build/Debug-iphoneos/RecallApp.build/Objects-normal/arm64/LibraryScreen.swiftdeps"
+  }
+}
