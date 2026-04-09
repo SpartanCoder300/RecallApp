@@ -74,13 +74,13 @@ enum SchedulingEngine {
 
     private static func apply(_ rating: Rating, to state: inout SM2State, cadence: ReviewCadence) {
         switch rating {
-        case .forgot:
+        case .missed:
             // Failed review: reset progress and decrease ease.
             state.easeFactor = max(1.3, state.easeFactor - 0.2)
             state.repetitions = 0
             state.interval = baseInterval(cadence: cadence)
 
-        case .hard:
+        case .partial:
             // Weak pass: interval grows slowly (×1.2), ease decreases, repetitions unchanged.
             state.easeFactor = max(1.3, state.easeFactor - 0.15)
             if state.interval == 0 {
@@ -91,7 +91,7 @@ enum SchedulingEngine {
                 state.interval = max(state.interval + 1, grown)
             }
 
-        case .easy:
+        case .nailed:
             // Full pass: interval grows by ease factor, ease increases, repetitions increment.
             state.easeFactor += 0.1
             switch state.repetitions {

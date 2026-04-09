@@ -139,7 +139,7 @@ struct LibraryContent: View {
             case .mastered:
                 return item.status == .mastered
             case .missed:
-                return latestRating(for: item) == .forgot
+                return latestRating(for: item) == .missed
             }
         }
     }

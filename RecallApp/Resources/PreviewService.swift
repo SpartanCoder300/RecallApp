@@ -39,15 +39,15 @@ enum PreviewService {
         )
         item.createdAt = Calendar.current.date(byAdding: .day, value: -12, to: Date()) ?? Date()
 
-        let first = Review(rating: .forgot, recalledText: "Struggled to remember the exact role.")
+        let first = Review(rating: .missed, recalledText: "Struggled to remember the exact role.")
         first.reviewedAt = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
         first.item = item
 
-        let second = Review(rating: .hard, recalledText: "Memory region involved in navigation and encoding.")
+        let second = Review(rating: .partial, recalledText: "Memory region involved in navigation and encoding.")
         second.reviewedAt = Calendar.current.date(byAdding: .day, value: -3, to: Date()) ?? Date()
         second.item = item
 
-        let third = Review(rating: .easy, recalledText: "Critical for forming and consolidating declarative memories.")
+        let third = Review(rating: .nailed, recalledText: "Critical for forming and consolidating declarative memories.")
         third.reviewedAt = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
         third.item = item
 
@@ -67,7 +67,7 @@ enum PreviewService {
             note: "Consistency, Availability, Partition tolerance trade-off"
         )
         todayDue.createdAt = Date()
-        let todayReview = Review(rating: .hard)
+        let todayReview = Review(rating: .partial)
         todayReview.reviewedAt = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
         todayReview.item = todayDue
         todayDue.reviews = [todayReview]
@@ -77,7 +77,7 @@ enum PreviewService {
             note: "Lightweight pub/sub messaging for constrained devices"
         )
         olderDue.createdAt = Calendar.current.date(byAdding: .day, value: -3, to: Date()) ?? Date()
-        let olderReview = Review(rating: .forgot)
+        let olderReview = Review(rating: .missed)
         olderReview.reviewedAt = Calendar.current.date(byAdding: .day, value: -2, to: Date()) ?? Date()
         olderReview.item = olderDue
         olderDue.reviews = [olderReview]
@@ -89,7 +89,7 @@ enum PreviewService {
         mastered.createdAt = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
         var masteredReviews: [Review] = []
         for dayOffset in [28, 21, 14, 7, 2] {
-            let review = Review(rating: .easy)
+            let review = Review(rating: .nailed)
             review.reviewedAt = Calendar.current.date(byAdding: .day, value: -dayOffset, to: Date()) ?? Date()
             review.item = mastered
             masteredReviews.append(review)

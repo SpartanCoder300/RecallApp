@@ -7,14 +7,14 @@ final class Review {
     var reviewedAt: Date = Date()
     /// Stored as a raw String — SwiftData cannot reliably persist custom Codable
     /// enums as stored properties on device. Access via the `rating` computed property.
-    var ratingValue: String = Rating.forgot.rawValue
+    var ratingValue: String = Rating.missed.rawValue
     var recalledText: String?
 
     var item: RecallItem?
 
     /// Typed access to the stored rating value.
     var rating: Rating {
-        get { Rating(rawValue: ratingValue) ?? .forgot }
+        get { Rating(rawValue: ratingValue) ?? .missed }
         set { ratingValue = newValue.rawValue }
     }
 
