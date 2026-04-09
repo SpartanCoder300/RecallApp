@@ -16,6 +16,7 @@ struct RecallSessionScreen: View {
     @State private var showingExitConfirmation = false
     @State private var dragOffset: CGSize = .zero
     @State private var isDismissing = false
+    @State private var results: [ItemResult] = []
 
     private let swipeThreshold: CGFloat = 90
 
@@ -58,7 +59,7 @@ struct RecallSessionScreen: View {
                     completionView
                 }
             }
-            .navigationTitle(currentItem == nil ? "Recall" : "\(min(completedCount + 1, max(totalCount, 1))) of \(totalCount)")
+            .navigationTitle(currentItem == nil ? "Summary" : "\(min(completedCount + 1, max(totalCount, 1))) of \(totalCount)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if currentItem != nil {
@@ -261,15 +262,8 @@ struct RecallSessionScreen: View {
     // MARK: - Completion
 
     private var completionView: some View {
-        ContentUnavailableView {
-            Label("Session Complete", systemImage: "checkmark.circle.fill")
-        } description: {
-            Text("You reviewed \(completedCount) \(completedCount == 1 ? "item" : "items").")
-        } actions: {
-            Button("Done") { dismiss() }
-                .buttonStyle(.borderedProminent)
-                .accessibilityLabel("Done")
-        }
+        SessionSummaryView(results: results, onDone: { dismiss() })
+            .transition(.opacity)
     }
 
     // MARK: - Gesture handling
@@ -362,9 +356,14 @@ struct RecallSessionScreen: View {
             return
         }
 
+        results.append(ItemResult(item: currentItem, rating: rating))
         completedCount += 1
         queue.removeFirst()
         revealedAnswer = nil
+
+        if queue.isEmpty {
+            HapticManager.success()
+        }
     }
 
     // MARK: - Helpers
@@ -386,10 +385,187 @@ struct RecallSessionScreen: View {
     }
 }
 
+// MARK: - Supporting types
+
+private struct ItemResult {
+    let item: RecallItem
+    let rating: Rating
+}
+
+// MARK: - Session summary
+
+private struct SessionSummaryView: View {
+    let results: [ItemResult]
+    let onDone: () -> Void
+
+    private var nailedCount: Int  { results.filter { $0.rating == .nailed  }.count }
+    private var partialCount: Int { results.filter { $0.rating == .partial }.count }
+    private var missedCount: Int  { results.filter { $0.rating == .missed  }.count }
+    private var total: Int        { results.count }
+
+    private var missedItems: [RecallItem] {
+        results.filter { $0.rating == .missed }.map(\.item)
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: DT.Spacing.xl) {
+                header
+                    .padding(.top, DT.Spacing.xl)
+
+                VStack(spacing: DT.Spacing.md) {
+                    if total > 0 { proportionBar }
+                    countRow
+                }
+                .padding(.horizontal, DT.Spacing.lg)
+
+                if !missedItems.isEmpty {
+                    missedSection
+                        .padding(.horizontal, DT.Spacing.lg)
+                }
+
+                Button("Done", action: onDone)
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, DT.Spacing.lg)
+                    .padding(.bottom, DT.Spacing.xl)
+                    .accessibilityLabel("Done")
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .background(DT.Color.background.ignoresSafeArea())
+    }
+
+    // MARK: - Subviews
+
+    private var header: some View {
+        VStack(spacing: DT.Spacing.sm) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 52))
+                .foregroundStyle(DT.Color.success)
+                .accessibilityHidden(true)
+
+            Text("Session Complete")
+                .font(DT.Typography.title2)
+                .fontWeight(.semibold)
+
+            Text("\(total) \(total == 1 ? "card" : "cards") reviewed")
+                .font(DT.Typography.subheadline)
+                .foregroundStyle(DT.Color.textSecondary)
+        }
+    }
+
+    private var proportionBar: some View {
+        GeometryReader { proxy in
+            let segmentCount = [nailedCount, partialCount, missedCount].filter { $0 > 0 }.count
+            let gapWidth = CGFloat(max(0, segmentCount - 1)) * 3
+            let available = proxy.size.width - gapWidth
+
+            HStack(spacing: 3) {
+                if nailedCount > 0 {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(DT.Color.success)
+                        .frame(width: available * CGFloat(nailedCount) / CGFloat(total))
+                }
+                if partialCount > 0 {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(DT.Color.caution)
+                        .frame(width: available * CGFloat(partialCount) / CGFloat(total))
+                }
+                if missedCount > 0 {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(DT.Color.destructive)
+                        .frame(width: available * CGFloat(missedCount) / CGFloat(total))
+                }
+            }
+        }
+        .frame(height: 10)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(nailedCount) nailed, \(partialCount) partial, \(missedCount) missed")
+    }
+
+    private var countRow: some View {
+        HStack {
+            countCell(value: nailedCount,  label: "Nailed",  color: DT.Color.success)
+            Spacer()
+            countCell(value: partialCount, label: "Partial", color: DT.Color.caution)
+            Spacer()
+            countCell(value: missedCount,  label: "Missed",  color: DT.Color.destructive)
+        }
+    }
+
+    private func countCell(value: Int, label: String, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text("\(value)")
+                .font(DT.Typography.title2)
+                .fontWeight(.semibold)
+                .foregroundStyle(color)
+            Text(label)
+                .font(DT.Typography.caption)
+                .foregroundStyle(DT.Color.textSecondary)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(value) \(label)")
+    }
+
+    private var missedSection: some View {
+        VStack(alignment: .leading, spacing: DT.Spacing.sm) {
+            Text("NEEDS WORK")
+                .font(DT.Typography.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(DT.Color.textTertiary)
+
+            VStack(spacing: 0) {
+                ForEach(Array(missedItems.enumerated()), id: \.element.id) { index, item in
+                    HStack(spacing: DT.Spacing.md) {
+                        Image(systemName: "arrow.counterclockwise.circle.fill")
+                            .foregroundStyle(DT.Color.destructive)
+                            .font(DT.Typography.body)
+                            .accessibilityHidden(true)
+
+                        Text(item.term)
+                            .font(DT.Typography.body)
+                            .foregroundStyle(DT.Color.textPrimary)
+                            .lineLimit(2)
+
+                        Spacer()
+                    }
+                    .padding(.horizontal, DT.Spacing.md)
+                    .padding(.vertical, DT.Spacing.sm + 2)
+                    .frame(minHeight: 48)
+
+                    if index < missedItems.count - 1 {
+                        Divider()
+                            .padding(.leading, DT.Spacing.md + 22)
+                    }
+                }
+            }
+            .background(DT.Color.surface, in: RoundedRectangle(cornerRadius: DT.Radius.lg))
+        }
+    }
+}
+
+// MARK: - Previews
+
 #Preview("Recall Session") {
     RecallSessionScreen(items: RecallSessionPreviewService.sessionItems)
 }
 
 #Preview("Recall Session Complete") {
     RecallSessionScreen(items: [])
+}
+
+#Preview("Session Summary") {
+    let items = RecallSessionPreviewService.sessionItems
+    let results: [ItemResult] = [
+        ItemResult(item: items[0], rating: .nailed),
+        ItemResult(item: items[1], rating: .missed),
+        ItemResult(item: items[0], rating: .partial),
+    ]
+    NavigationStack {
+        SessionSummaryView(results: results, onDone: { })
+            .navigationTitle("Summary")
+            .navigationBarTitleDisplayMode(.inline)
+    }
 }
