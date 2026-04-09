@@ -9,8 +9,8 @@ final class RecallItem {
     var term: String = ""
     /// Optional hint shown during recall if the user asks for help.
     var note: String?
-    /// Cached on-device AI answer shown after reveal.
-    var cachedAIAnswerText: String?
+    /// The answer shown after reveal. May be user-written or AI-generated.
+    var answer: String?
     var createdAt: Date = Date()
 
     // .cascade is not supported by CloudKit — SwiftData converts it to .nullify on remote.
@@ -25,24 +25,18 @@ final class RecallItem {
     init(
         term: String,
         note: String? = nil,
-        cachedAIAnswerText: String? = nil
+        answer: String? = nil
     ) {
         self.id = UUID()
         self.term = term
         self.note = note
-        self.cachedAIAnswerText = cachedAIAnswerText
+        self.answer = answer
         self.createdAt = Date()
     }
 
     // MARK: - Computed
 
     var reviewCount: Int { (reviews ?? []).count }
-
-    var cachedAIAnswer: String? {
-        let trimmed = cachedAIAnswerText?.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let trimmed, !trimmed.isEmpty else { return nil }
-        return trimmed
-    }
 
     /// The date this item is next due for review.
     /// Items with no reviews return `Date.distantPast` (always due).

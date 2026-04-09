@@ -10,6 +10,7 @@ struct ItemDetailScreen: View {
     @State private var isEditing = false
     @State private var draftTerm = ""
     @State private var draftNote = ""
+    @State private var draftAnswer = ""
     @State private var showingDeleteConfirmation = false
     @State private var showingDiscardConfirmation = false
     @State private var showingErrorAlert = false
@@ -17,7 +18,7 @@ struct ItemDetailScreen: View {
     @State private var errorMessage = ""
     @FocusState private var editFocus: EditField?
 
-    private enum EditField { case term, note }
+    private enum EditField { case term, answer, note }
 
     private var sortedReviews: [Review] {
         (item.reviews ?? []).sorted { $0.reviewedAt > $1.reviewedAt }
@@ -31,12 +32,22 @@ struct ItemDetailScreen: View {
         draftNote.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var trimmedAnswer: String {
+        draftAnswer.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private var normalizedCurrentNote: String {
         (item.note ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var normalizedCurrentAnswer: String {
+        (item.answer ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private var hasUnsavedChanges: Bool {
-        trimmedTerm != item.term || trimmedNote != normalizedCurrentNote
+        trimmedTerm != item.term
+            || trimmedNote != normalizedCurrentNote
+            || trimmedAnswer != normalizedCurrentAnswer
     }
 
     var body: some View {
@@ -47,9 +58,13 @@ struct ItemDetailScreen: View {
                         .focused($editFocus, equals: .term)
                         .accessibilityLabel("Term")
 
-                    TextField("Answer or context", text: $draftNote, axis: .vertical)
+                    TextField("Answer", text: $draftAnswer, axis: .vertical)
+                        .focused($editFocus, equals: .answer)
+                        .accessibilityLabel("Answer")
+
+                    TextField("Hint (optional)", text: $draftNote, axis: .vertical)
                         .focused($editFocus, equals: .note)
-                        .accessibilityLabel("Answer or context")
+                        .accessibilityLabel("Hint")
                 } else {
                     VStack(alignment: .leading, spacing: 12) {
                         Text(item.term)
@@ -57,16 +72,16 @@ struct ItemDetailScreen: View {
                             .fontWeight(.semibold)
                             .accessibilityAddTraits(.isHeader)
 
+                        if let answer = item.answer, !answer.isEmpty {
+                            Text(answer)
+                                .font(.body)
+                                .textSelection(.enabled)
+                        }
+
                         if let note = item.note, !note.isEmpty {
                             Text(note)
                                 .font(.body)
                                 .foregroundStyle(.secondary)
-                        }
-
-                        if let cachedAIAnswer = item.cachedAIAnswer {
-                            Text(cachedAIAnswer)
-                                .font(.body)
-                                .textSelection(.enabled)
                         }
                     }
                     .padding(.vertical, 4)
@@ -162,21 +177,16 @@ struct ItemDetailScreen: View {
 
     private func syncDrafts() {
         draftTerm = item.term
+        draftAnswer = item.answer ?? ""
         draftNote = item.note ?? ""
     }
 
     private func saveEdits() {
         guard !trimmedTerm.isEmpty else { return }
 
-        let termChanged = trimmedTerm != item.term
-        let noteChanged = trimmedNote != normalizedCurrentNote
-
         item.term = trimmedTerm
+        item.answer = trimmedAnswer.isEmpty ? nil : trimmedAnswer
         item.note = trimmedNote.isEmpty ? nil : trimmedNote
-
-        if termChanged || noteChanged {
-            item.cachedAIAnswerText = nil
-        }
 
         do {
             try modelContext.save()

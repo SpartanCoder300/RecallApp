@@ -5,7 +5,7 @@ enum RecallSessionPreviewService {
         RecallItem(
             term: "CAP Theorem",
             note: "Consistency, availability, and partition tolerance cannot all be guaranteed during a network partition.",
-            cachedAIAnswerText: """
+            answer: """
             - Definition: CAP theorem describes the tradeoff between consistency, availability, and partition tolerance.
             - Key concept: During a partition, a distributed system must prioritize consistency or availability.
             - Why it matters: It frames real system design tradeoffs instead of pretending every distributed system can maximize all three.

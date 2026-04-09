@@ -6,22 +6,27 @@ struct QuickAddSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var term = ""
+    @State private var answer = ""
     @State private var note = ""
-    @State private var showingAnswerField = false
+    @State private var showingHint = false
     @State private var saveErrorMessage = ""
     @State private var showingSaveError = false
     @FocusState private var focus: Field?
 
-    private let onSavePreview: ((String, String?) -> Void)?
+    private let onSavePreview: ((String, String?, String?) -> Void)?
 
-    private enum Field { case term, note }
+    private enum Field { case term, answer, note }
 
-    init(onSavePreview: ((String, String?) -> Void)? = nil) {
+    init(onSavePreview: ((String, String?, String?) -> Void)? = nil) {
         self.onSavePreview = onSavePreview
     }
 
     private var trimmedTerm: String {
         term.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedAnswer: String {
+        answer.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var trimmedNote: String {
@@ -32,41 +37,43 @@ struct QuickAddSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Term", text: $term, axis: .vertical)
+                    TextField("Question or concept", text: $term, axis: .vertical)
                         .focused($focus, equals: .term)
-                        .submitLabel(showingAnswerField ? .next : .done)
-                        .onSubmit {
-                            if showingAnswerField {
-                                focus = .note
-                            } else {
-                                save()
-                            }
-                        }
-                        .accessibilityLabel("Term")
+                        .submitLabel(.next)
+                        .onSubmit { focus = .answer }
+                        .accessibilityLabel("Question or concept")
 
-                    if showingAnswerField {
-                        TextField("Answer or context", text: $note, axis: .vertical)
+                    TextField("Answer", text: $answer, axis: .vertical)
+                        .focused($focus, equals: .answer)
+                        .submitLabel(showingHint ? .next : .done)
+                        .onSubmit {
+                            if showingHint { focus = .note } else { save() }
+                        }
+                        .accessibilityLabel("Answer")
+                }
+
+                if showingHint {
+                    Section {
+                        TextField("Hint", text: $note, axis: .vertical)
                             .focused($focus, equals: .note)
                             .submitLabel(.done)
                             .onSubmit(save)
-                            .accessibilityLabel("Answer or context")
+                            .accessibilityLabel("Hint")
+                    } header: {
+                        Text("Hint")
+                    } footer: {
+                        Text("Shown as context during sessions.")
                     }
-                }
-
-                if !showingAnswerField {
+                } else {
                     Section {
                         Button {
-                            withAnimation {
-                                showingAnswerField = true
-                            }
-                            DispatchQueue.main.async {
-                                focus = .note
-                            }
+                            withAnimation { showingHint = true }
+                            DispatchQueue.main.async { focus = .note }
                         } label: {
-                            Label("Add Context", systemImage: "plus.circle")
+                            Label("Add hint", systemImage: "plus.circle")
                         }
-                        .accessibilityLabel("Add context")
-                        .accessibilityHint("Shows an optional answer or context field")
+                        .accessibilityLabel("Add hint")
+                        .accessibilityHint("Shows an optional hint field displayed during sessions")
                     }
                 }
             }
@@ -74,10 +81,8 @@ struct QuickAddSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .accessibilityLabel("Cancel")
+                    Button("Cancel") { dismiss() }
+                        .accessibilityLabel("Cancel")
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -92,9 +97,7 @@ struct QuickAddSheet: View {
                 Text(saveErrorMessage)
             }
             .onAppear {
-                DispatchQueue.main.async {
-                    focus = .term
-                }
+                DispatchQueue.main.async { focus = .term }
             }
         }
         .presentationDetents([.medium, .large])
@@ -107,16 +110,17 @@ struct QuickAddSheet: View {
             return
         }
 
+        let savedAnswer = trimmedAnswer.isEmpty ? nil : trimmedAnswer
         let savedNote = trimmedNote.isEmpty ? nil : trimmedNote
 
         if let onSavePreview {
-            onSavePreview(trimmedTerm, savedNote)
+            onSavePreview(trimmedTerm, savedAnswer, savedNote)
             HapticManager.success()
             dismiss()
             return
         }
 
-        let item = RecallItem(term: trimmedTerm, note: savedNote)
+        let item = RecallItem(term: trimmedTerm, note: savedNote, answer: savedAnswer)
 
         do {
             try modelContext.transaction {
@@ -137,6 +141,6 @@ struct QuickAddSheet: View {
 #Preview {
     Color.clear
         .sheet(isPresented: .constant(true)) {
-            QuickAddSheet(onSavePreview: { _, _ in })
+            QuickAddSheet(onSavePreview: { _, _, _ in })
         }
 }

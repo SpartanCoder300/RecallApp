@@ -317,9 +317,9 @@ struct RecallSessionScreen: View {
     // MARK: - Data
 
     private func revealAnswer(for item: RecallItem) async {
-        if let cached = item.cachedAIAnswer {
+        if let existing = item.answer, !existing.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             HapticManager.light()
-            withAnimation { revealedAnswer = cached }
+            withAnimation { revealedAnswer = existing }
             return
         }
 
@@ -327,10 +327,10 @@ struct RecallSessionScreen: View {
         HapticManager.light()
 
         do {
-            let answer = try await AIAnswerService.generateAnswer(term: item.term, context: item.note)
-            item.cachedAIAnswerText = answer
+            let generated = try await AIAnswerService.generateAnswer(term: item.term, context: item.note)
+            item.answer = generated
             try modelContext.save()
-            withAnimation { revealedAnswer = answer }
+            withAnimation { revealedAnswer = generated }
         } catch {
             generationErrorMessage = error.localizedDescription
             showingGenerationError = true
