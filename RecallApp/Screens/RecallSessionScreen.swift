@@ -17,6 +17,7 @@ struct RecallSessionScreen: View {
     @State private var dragOffset: CGSize = .zero
     @State private var isDismissing = false
     @State private var results: [ItemResult] = []
+    @State private var showingHint = false
 
     private let swipeThreshold: CGFloat = 90
 
@@ -184,6 +185,17 @@ struct RecallSessionScreen: View {
                 .accessibilityAddTraits(.isHeader)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
+            if showingHint,
+               revealedAnswer == nil,
+               let note = item.note,
+               !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Divider()
+                Text(note)
+                    .font(DT.Typography.footnote)
+                    .foregroundStyle(DT.Color.textSecondary)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+
             if let answer = revealedAnswer {
                 Divider()
 
@@ -251,11 +263,29 @@ struct RecallSessionScreen: View {
             .font(DT.Typography.caption)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Swipe left for Missed, down for Partial, right for Nailed")
-        } else {
-            Text(isGeneratingAnswer ? "Generating answer…" : "Tap card to reveal")
+        } else if isGeneratingAnswer {
+            Text("Generating answer…")
                 .font(DT.Typography.footnote)
                 .foregroundStyle(DT.Color.textTertiary)
                 .frame(maxWidth: .infinity, alignment: .center)
+        } else {
+            let hasHint = !(currentItem?.note?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+            HStack {
+                Text("Tap card to reveal")
+                    .font(DT.Typography.footnote)
+                    .foregroundStyle(DT.Color.textTertiary)
+                    .frame(maxWidth: .infinity, alignment: hasHint ? .leading : .center)
+
+                if hasHint && !showingHint {
+                    Button("Show hint") {
+                        withAnimation { showingHint = true }
+                        HapticManager.soft()
+                    }
+                    .font(DT.Typography.footnote)
+                    .accessibilityLabel("Show hint")
+                    .accessibilityHint("Reveals the hint for this card")
+                }
+            }
         }
     }
 
@@ -360,6 +390,7 @@ struct RecallSessionScreen: View {
         completedCount += 1
         queue.removeFirst()
         revealedAnswer = nil
+        showingHint = false
 
         if queue.isEmpty {
             HapticManager.success()
