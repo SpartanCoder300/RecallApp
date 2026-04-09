@@ -12,6 +12,7 @@ struct ItemDetailScreen: View {
     @State private var draftNote = ""
     @State private var draftAnswer = ""
     @State private var gapState: GapState = .idle
+    @State private var rewriteState: RewriteState = .idle
     @State private var showingDeleteConfirmation = false
     @State private var showingDiscardConfirmation = false
     @State private var showingErrorAlert = false
@@ -90,6 +91,7 @@ struct ItemDetailScreen: View {
             }
 
             if !isEditing, item.answer != nil {
+                rewriteSection
                 gapSection
             }
 
@@ -178,6 +180,7 @@ struct ItemDetailScreen: View {
     private func startEditing() {
         syncDrafts()
         gapState = .idle
+        rewriteState = .idle
         isEditing = true
     }
 
@@ -194,6 +197,7 @@ struct ItemDetailScreen: View {
         item.answer = trimmedAnswer.isEmpty ? nil : trimmedAnswer
         item.note = trimmedNote.isEmpty ? nil : trimmedNote
         gapState = .idle
+        rewriteState = .idle
 
         do {
             try modelContext.save()
@@ -225,6 +229,91 @@ struct ItemDetailScreen: View {
         } catch {
             errorTitle = "Unable to Delete"
             errorMessage = error.localizedDescription
+            showingErrorAlert = true
+        }
+    }
+
+    // MARK: - Rewrite
+
+    @ViewBuilder
+    private var rewriteSection: some View {
+        Section {
+            switch rewriteState {
+            case .idle:
+                Button {
+                    Task { await performRewrite() }
+                } label: {
+                    Label("Rewrite answer", systemImage: "wand.and.sparkles")
+                }
+                .accessibilityLabel("Rewrite answer")
+                .accessibilityHint("Uses AI to rewrite your answer with clearer, more concise phrasing")
+
+            case .loading:
+                HStack(spacing: 12) {
+                    ProgressView()
+                    Text("Rewriting…")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
+
+            case .preview(let proposed):
+                Text(proposed)
+                    .font(.body)
+                    .textSelection(.enabled)
+
+                Button("Apply rewrite") {
+                    applyRewrite(proposed)
+                }
+                .accessibilityLabel("Apply rewrite")
+                .accessibilityHint("Replaces your current answer with the rewritten version")
+
+                Button("Discard", role: .destructive) {
+                    rewriteState = .idle
+                }
+                .accessibilityLabel("Discard rewrite")
+
+            case .error(let message):
+                Text(message)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Button("Try again") {
+                    Task { await performRewrite() }
+                }
+                .accessibilityLabel("Retry rewrite")
+            }
+        } header: {
+            Text("Rewrite Answer")
+        } footer: {
+            if case .preview = rewriteState {
+                Text("AI suggestion — same facts, cleaner phrasing. Review before applying.")
+            }
+        }
+    }
+
+    private func performRewrite() async {
+        guard let answer = item.answer,
+              !answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+
+        rewriteState = .loading
+
+        do {
+            let proposed = try await AIAnswerService.rewriteAnswer(term: item.term, answer: answer)
+            rewriteState = .preview(proposed)
+        } catch {
+            rewriteState = .error(error.localizedDescription)
+        }
+    }
+
+    private func applyRewrite(_ proposed: String) {
+        item.answer = proposed
+        rewriteState = .idle
+        gapState = .idle  // gaps are stale against the new answer
+
+        do {
+            try modelContext.save()
+        } catch {
+            errorTitle = "Unable to Save"
+            errorMessage = "Please try again."
             showingErrorAlert = true
         }
     }
@@ -313,7 +402,14 @@ struct ItemDetailScreen: View {
     }
 }
 
-// MARK: - Gap state
+// MARK: - AI state
+
+private enum RewriteState {
+    case idle
+    case loading
+    case preview(String)
+    case error(String)
+}
 
 private enum GapState {
     case idle

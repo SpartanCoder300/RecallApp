@@ -69,6 +69,41 @@ enum AIAnswerService {
         """
     }
 
+    // MARK: - Rewrite
+
+    /// Returns a rewritten, cleaner version of the user's answer without adding new information.
+    static func rewriteAnswer(term: String, answer: String) async throws -> String {
+        let model = SystemLanguageModel.default
+
+        guard model.isAvailable else {
+            throw AIAnswerError.modelUnavailable
+        }
+
+        let session = LanguageModelSession(model: model)
+        let response = try await session.respond(
+            to: rewritePrompt(term: term, answer: answer),
+            generating: AIRewriteResponse.self
+        )
+
+        return clean(response.content.rewrittenAnswer)
+    }
+
+    private static func rewritePrompt(term: String, answer: String) -> String {
+        """
+        Rewrite the student's spaced-repetition answer to make it clearer and more concise.
+
+        Term: \(term)
+        Student's answer: \(answer)
+
+        Rules:
+        - Preserve all facts and meaning from the original — do not add new information.
+        - Improve clarity, remove redundancy, and tighten phrasing.
+        - Keep the same structure (bullet points if the original uses them).
+        - Write for fast recall, not for exhaustive teaching.
+        - Return only the rewritten answer text, no preamble or commentary.
+        """
+    }
+
     // MARK: - Gap suggestions
 
     /// Returns up to three sub-concepts missing from the user's answer, or an empty array
@@ -116,6 +151,12 @@ enum AIAnswerService {
             .replacingOccurrences(of: "\n", with: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
+}
+
+@Generable
+private struct AIRewriteResponse {
+    @Guide(description: "The rewritten answer. Same facts, clearer and more concise phrasing. No preamble.")
+    var rewrittenAnswer: String
 }
 
 @Generable
