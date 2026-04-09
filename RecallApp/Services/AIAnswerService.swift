@@ -69,9 +69,63 @@ enum AIAnswerService {
         """
     }
 
+    // MARK: - Gap suggestions
+
+    /// Returns up to three sub-concepts missing from the user's answer, or an empty array
+    /// if the answer is already comprehensive. Never throws for "no gaps found" — that's
+    /// represented as an empty array.
+    static func generateGaps(term: String, answer: String) async throws -> [String] {
+        let model = SystemLanguageModel.default
+
+        guard model.isAvailable else {
+            throw AIAnswerError.modelUnavailable
+        }
+
+        let session = LanguageModelSession(model: model)
+        let response = try await session.respond(
+            to: gapPrompt(term: term, answer: answer),
+            generating: AIGapResponse.self
+        )
+
+        return [response.content.gap1, response.content.gap2, response.content.gap3]
+            .map { clean($0) }
+            .filter { !$0.isEmpty && $0.lowercased() != "none" }
+    }
+
+    private static func gapPrompt(term: String, answer: String) -> String {
+        """
+        You are helping a student identify gaps in their recall answer for a spaced-repetition card.
+
+        Term: \(term)
+        Student's answer: \(answer)
+
+        Task: Identify up to three important sub-concepts, angles, or distinctions that the student's \
+        answer is missing or significantly underselling. Focus on what would meaningfully improve recall.
+
+        Rules:
+        - Each gap is one short sentence describing what is missing.
+        - Do not repeat anything already in the student's answer.
+        - If the answer is already comprehensive, return "none" for unused fields.
+        - Do not add markdown, bullets, or numbering.
+        - Write for a student who wants to improve their answer, not a critic.
+        """
+    }
+
     private static func clean(_ text: String) -> String {
         text
             .replacingOccurrences(of: "\n", with: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
+}
+
+@Generable
+private struct AIGapResponse {
+    @Guide(description: "The most important sub-concept missing from the student's answer. One sentence. Write 'none' if not applicable.")
+    var gap1: String
+
+    @Guide(description: "A second missing sub-concept. One sentence. Write 'none' if not applicable.")
+    var gap2: String
+
+    @Guide(description: "A third missing sub-concept. One sentence. Write 'none' if not applicable.")
+    var gap3: String
 }

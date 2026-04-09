@@ -11,6 +11,7 @@ struct ItemDetailScreen: View {
     @State private var draftTerm = ""
     @State private var draftNote = ""
     @State private var draftAnswer = ""
+    @State private var gapState: GapState = .idle
     @State private var showingDeleteConfirmation = false
     @State private var showingDiscardConfirmation = false
     @State private var showingErrorAlert = false
@@ -86,6 +87,10 @@ struct ItemDetailScreen: View {
                     }
                     .padding(.vertical, 4)
                 }
+            }
+
+            if !isEditing, item.answer != nil {
+                gapSection
             }
 
             Section("Details") {
@@ -172,6 +177,7 @@ struct ItemDetailScreen: View {
 
     private func startEditing() {
         syncDrafts()
+        gapState = .idle
         isEditing = true
     }
 
@@ -187,6 +193,7 @@ struct ItemDetailScreen: View {
         item.term = trimmedTerm
         item.answer = trimmedAnswer.isEmpty ? nil : trimmedAnswer
         item.note = trimmedNote.isEmpty ? nil : trimmedNote
+        gapState = .idle
 
         do {
             try modelContext.save()
@@ -221,6 +228,98 @@ struct ItemDetailScreen: View {
             showingErrorAlert = true
         }
     }
+
+    // MARK: - Gap suggestions
+
+    @ViewBuilder
+    private var gapSection: some View {
+        Section {
+            switch gapState {
+            case .idle:
+                Button {
+                    Task { await findGaps() }
+                } label: {
+                    Label("Find knowledge gaps", systemImage: "sparkles")
+                }
+                .accessibilityLabel("Find knowledge gaps")
+                .accessibilityHint("Uses AI to identify sub-concepts missing from your answer")
+
+            case .loading:
+                HStack(spacing: 12) {
+                    ProgressView()
+                    Text("Analysing your answer…")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
+
+            case .results(let gaps):
+                if gaps.isEmpty {
+                    Label("Your answer looks comprehensive.", systemImage: "checkmark.circle")
+                        .foregroundStyle(.secondary)
+                        .font(.body)
+                } else {
+                    ForEach(gaps, id: \.self) { gap in
+                        HStack(alignment: .top, spacing: 12) {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .foregroundStyle(.orange)
+                                .font(.body)
+                                .padding(.top, 2)
+                                .accessibilityHidden(true)
+                            Text(gap)
+                                .font(.body)
+                                .foregroundStyle(.primary)
+                        }
+                    }
+                }
+                Button {
+                    Task { await findGaps() }
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                        .font(.footnote)
+                }
+                .foregroundStyle(.secondary)
+                .accessibilityLabel("Refresh gap suggestions")
+
+            case .error(let message):
+                Text(message)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Button("Try again") {
+                    Task { await findGaps() }
+                }
+                .accessibilityLabel("Retry finding gaps")
+            }
+        } header: {
+            Text("Knowledge Gaps")
+        } footer: {
+            if case .results = gapState {
+                Text("AI suggestions — verify against authoritative sources.")
+            }
+        }
+    }
+
+    private func findGaps() async {
+        guard let answer = item.answer,
+              !answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+
+        gapState = .loading
+
+        do {
+            let gaps = try await AIAnswerService.generateGaps(term: item.term, answer: answer)
+            gapState = .results(gaps)
+        } catch {
+            gapState = .error(error.localizedDescription)
+        }
+    }
+}
+
+// MARK: - Gap state
+
+private enum GapState {
+    case idle
+    case loading
+    case results([String])
+    case error(String)
 }
 
 #Preview {
