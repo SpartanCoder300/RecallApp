@@ -36,8 +36,9 @@ enum SchedulingEngine {
         guard !records.isEmpty else { return .distantPast }
         let sorted = records.sorted { $0.reviewedAt < $1.reviewedAt }
         let state = computeState(from: sorted, cadence: cadence)
-        let intervalSeconds = Double(state.interval) * 86_400
-        return sorted[sorted.count - 1].reviewedAt.addingTimeInterval(intervalSeconds)
+        let interval = fuzzedInterval(state.interval, lastReviewDate: sorted.last!.reviewedAt)
+        let intervalSeconds = Double(interval) * 86_400
+        return sorted.last!.reviewedAt.addingTimeInterval(intervalSeconds)
     }
 
     /// Returns whether an item's SM-2 interval has reached the mastery threshold for the given cadence.
@@ -124,6 +125,22 @@ enum SchedulingEngine {
         case .relaxed: return 9
         case .intensive: return 4
         }
+    }
+
+    // MARK: - Interval fuzz
+
+    /// Applies ±15 % deterministic fuzz to an interval so cards added on the same
+    /// day don't all come due together again. Fuzz is seeded by the last review
+    /// timestamp — stable for a given review history, changes after each new review.
+    /// Intervals of 1 day are left unchanged (fuzz at that scale is meaningless).
+    private static func fuzzedInterval(_ interval: Int, lastReviewDate: Date) -> Int {
+        guard interval >= 2 else { return interval }
+        // LCG hash of the review timestamp for cheap, deterministic pseudo-randomness.
+        let seed = UInt64(bitPattern: Int64(lastReviewDate.timeIntervalSince1970))
+        let h = seed &* 6364136223846793005 &+ 1442695040888963407
+        let bucket = Int(h >> 54) % 100          // 0–99
+        let fuzz = (Double(bucket) / 99.0) * 0.30 - 0.15   // –0.15 … +0.15
+        return max(1, Int((Double(interval) * (1.0 + fuzz)).rounded()))
     }
 
     /// The interval (in days) at which a card is considered mastered.

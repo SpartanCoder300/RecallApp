@@ -7,12 +7,20 @@ struct HomeScreen: View {
     @State private var showingRecallSession = false
     @State private var showingQuickAdd = false
 
+    private var sessionQueue: [RecallItem] {
+        SessionBuilder.buildQueue(
+            from: allItems,
+            dailyNewLimit: SessionBuilder.dailyNewLimit(for: AppSettings.currentCadence)
+        )
+    }
+
     var body: some View {
         NavigationStack {
             HomeScreenContent(
                 snapshot: HomeScreenSnapshot.makePreviewSnapshot(
                     allItems: allItems,
                     allReviews: allReviews,
+                    sessionQueue: sessionQueue,
                     now: Date()
                 ),
                 onBeginReview: { showingRecallSession = true }
@@ -32,7 +40,7 @@ struct HomeScreen: View {
                 }
             }
             .fullScreenCover(isPresented: $showingRecallSession) {
-                RecallSessionScreen(items: allItems.filter(\.isDue))
+                RecallSessionScreen(items: sessionQueue)
             }
             .sheet(isPresented: $showingQuickAdd) {
                 QuickAddSheet()
@@ -71,6 +79,7 @@ struct HomeScreenSnapshot {
     static func makePreviewSnapshot(
         allItems: [RecallItem],
         allReviews: [Review],
+        sessionQueue: [RecallItem] = [],
         now: Date
     ) -> HomeScreenSnapshot {
         let calendar = Calendar.current
@@ -96,7 +105,7 @@ struct HomeScreenSnapshot {
         return HomeScreenSnapshot(
             greeting: greeting(for: now),
             streak: streak,
-            dueCount: dueItems.count,
+            dueCount: sessionQueue.isEmpty ? dueItems.count : sessionQueue.count,
             todaysItems: todaysItems,
             previousDueItems: previousDueItems
         )
