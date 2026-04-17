@@ -152,24 +152,24 @@ struct LibraryContent: View {
                 emptySearchState
             } else {
                 List {
-                    ForEach(filteredItems) { item in
-                        NavigationLink {
-                            ItemDetailScreen(item: item)
-                        } label: {
-                            LibraryRow(item: item)
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button("Delete", role: .destructive) {
-                                onDelete?(item)
+                    Section {
+                        ForEach(filteredItems) { item in
+                            NavigationLink {
+                                ItemDetailScreen(item: item)
+                            } label: {
+                                LibraryRow(item: item)
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button("Delete", role: .destructive) {
+                                    onDelete?(item)
+                                }
                             }
                         }
-                        .listRowBackground(DT.Color.background)
                     }
                 }
-                .listStyle(.plain)
+                .listStyle(.insetGrouped)
             }
         }
-        .background(DT.Color.background)
     }
 
     private var emptyLibraryState: some View {

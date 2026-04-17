@@ -57,7 +57,6 @@ struct CollectionDetailScreen: View {
                     } label: {
                         CollectionItemRow(item: item)
                     }
-                    .listRowBackground(DT.Color.background)
                 }
             } header: {
                 Text("Items (\(items.count))")

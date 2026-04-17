@@ -13,6 +13,7 @@ struct ItemDetailScreen: View {
     @State private var draftAnswer = ""
     @State private var gapState: GapState = .idle
     @State private var rewriteState: RewriteState = .idle
+    @State private var showingQuickSession = false
     @State private var showingDeleteConfirmation = false
     @State private var showingDiscardConfirmation = false
     @State private var showingErrorAlert = false
@@ -90,6 +91,10 @@ struct ItemDetailScreen: View {
                 }
             }
 
+            if !isEditing {
+                reviewSection
+            }
+
             if !isEditing, item.answer != nil {
                 rewriteSection
                 gapSection
@@ -150,7 +155,7 @@ struct ItemDetailScreen: View {
                 .accessibilityHint("Deletes this item and its review history")
             }
         }
-        .navigationTitle("Item")
+        .navigationTitle(item.term)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(isEditing)
         .toolbar {
@@ -192,7 +197,34 @@ struct ItemDetailScreen: View {
         } message: {
             Text(errorMessage)
         }
+        .fullScreenCover(isPresented: $showingQuickSession) {
+            RecallSessionScreen(items: [item])
+        }
         .onAppear(perform: syncDrafts)
+    }
+
+    @ViewBuilder
+    private var reviewSection: some View {
+        Section {
+            Button {
+                HapticManager.medium()
+                showingQuickSession = true
+            } label: {
+                HStack {
+                    Label(
+                        item.isDue ? "Review Now" : "Review Anyway",
+                        systemImage: "play.fill"
+                    )
+                    .foregroundStyle(item.isDue ? DT.Color.accent : DT.Color.textSecondary)
+                    Spacer()
+                    if item.isDue {
+                        StatusBadge(status: item.status)
+                    }
+                }
+            }
+            .accessibilityLabel(item.isDue ? "Review this card now" : "Review this card anyway")
+            .accessibilityHint("Opens a single-card review session")
+        }
     }
 
     private func startEditing() {

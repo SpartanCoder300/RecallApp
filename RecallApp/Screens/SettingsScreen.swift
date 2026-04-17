@@ -57,22 +57,27 @@ struct SettingsScreen: View {
                     }
                 }
 
-                Section("Rating Cadence") {
+                Section {
                     Picker("Cadence", selection: reviewCadence) {
                         ForEach(ReviewCadence.allCases) { cadence in
                             Text(cadence.title).tag(cadence)
                         }
                     }
-
+                } header: {
+                    Text("Review Cadence")
+                } footer: {
                     Text(reviewCadence.wrappedValue.description)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
                 }
 
-                Section("AI Answers") {
-                    Text("Reveal uses on-device AI to generate one cached answer for a card. It’s available to every user.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                Section {
+                    LabeledContent {
+                        Text("On-device")
+                            .foregroundStyle(.secondary)
+                    } label: {
+                        Label("Answer Generation", systemImage: "sparkles")
+                    }
+                } footer: {
+                    Text("When you reveal a card without a written answer, AI generates one and caches it on your device.")
                 }
 
                 Section {
@@ -83,7 +88,6 @@ struct SettingsScreen: View {
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
-            .formStyle(.grouped)
             .alert("Notifications Unavailable", isPresented: $showingReminderError) {
                 Button("OK", role: .cancel) { }
             } message: {

@@ -17,9 +17,9 @@ enum ReviewCadence: String, CaseIterable, Identifiable {
 
     var description: String {
         switch self {
-        case .standard: return "Adaptive intervals: 1d → 6d → 17d+, mastery at 21 days"
-        case .relaxed: return "Longer intervals: 2d → 9d → grows, mastery at 28 days"
-        case .intensive: return "Shorter intervals: 1d → 4d → grows, mastery at 14 days"
+        case .standard: return "Reviews grow further apart as you remember more. A balanced default for most learners."
+        case .relaxed:  return "Longer gaps between reviews. Good if you prefer a lighter daily load."
+        case .intensive: return "Shorter gaps and a lower mastery bar. Best for fast-paced exam preparation."
         }
     }
 }
