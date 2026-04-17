@@ -5,7 +5,7 @@ struct LibraryScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \RecallItem.createdAt, order: .reverse) private var allItems: [RecallItem]
     @State private var searchText = ""
-    @State private var filter: LibraryFilter = .all
+    @State private var filter: LibraryFilter = .active
     @State private var showingQuickAdd = false
     @State private var itemPendingDeletion: RecallItem?
     @State private var showingDeleteError = false
@@ -17,8 +17,11 @@ struct LibraryScreen: View {
                 items: allItems,
                 searchText: $searchText,
                 filter: $filter,
-                onDelete: { item in
-                    itemPendingDeletion = item
+                onDelete: { item in itemPendingDeletion = item },
+                onArchive: { item in
+                    item.isArchived.toggle()
+                    try? modelContext.save()
+                    HapticManager.light()
                 }
             )
             .navigationTitle("Library")
@@ -92,23 +95,23 @@ struct LibraryScreen: View {
 }
 
 enum LibraryFilter: String, CaseIterable, Identifiable {
-    case all = "All"
-    case due = "Due"
+    case active   = "Active"
+    case all      = "All"
+    case due      = "Due"
     case mastered = "Mastered"
-    case missed = "Missed"
+    case missed   = "Missed"
+    case archived = "Archived"
 
     var id: String { rawValue }
 
     var symbolName: String {
         switch self {
-        case .all:
-            return "line.3.horizontal.decrease.circle"
-        case .due:
-            return "clock.badge"
-        case .mastered:
-            return "checkmark.circle"
-        case .missed:
-            return "exclamationmark.circle"
+        case .active:   return "tray.full"
+        case .all:      return "line.3.horizontal.decrease.circle"
+        case .due:      return "clock.badge"
+        case .mastered: return "checkmark.circle"
+        case .missed:   return "exclamationmark.circle"
+        case .archived: return "archivebox"
         }
     }
 }
@@ -118,13 +121,13 @@ struct LibraryContent: View {
     @Binding var searchText: String
     @Binding var filter: LibraryFilter
     var onDelete: ((RecallItem) -> Void)? = nil
+    var onArchive: ((RecallItem) -> Void)? = nil
 
     private var filteredItems: [RecallItem] {
         let searched = items.filter { item in
             guard !searchText.isEmpty else { return true }
             let normalized = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !normalized.isEmpty else { return true }
-
             let termMatches = item.term.localizedCaseInsensitiveContains(normalized)
             let noteMatches = item.note?.localizedCaseInsensitiveContains(normalized) == true
             return termMatches || noteMatches
@@ -132,14 +135,20 @@ struct LibraryContent: View {
 
         return searched.filter { item in
             switch filter {
-            case .all:
+            case .active:
+                guard !item.isArchived else { return false }
+                if case .mastered = item.status { return false }
                 return true
+            case .all:
+                return !item.isArchived
             case .due:
-                return item.status == .due
+                return !item.isArchived && item.isDue
             case .mastered:
-                return item.status == .mastered
+                return !item.isArchived && item.status == .mastered
             case .missed:
-                return latestRating(for: item) == .missed
+                return !item.isArchived && latestRating(for: item) == .missed
+            case .archived:
+                return item.isArchived
             }
         }
     }
@@ -160,8 +169,23 @@ struct LibraryContent: View {
                                 LibraryRow(item: item)
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button("Delete", role: .destructive) {
-                                    onDelete?(item)
+                                if item.isArchived {
+                                    Button {
+                                        onArchive?(item)
+                                    } label: {
+                                        Label("Unarchive", systemImage: "archivebox.circle")
+                                    }
+                                    .tint(.green)
+                                } else {
+                                    Button("Delete", role: .destructive) {
+                                        onDelete?(item)
+                                    }
+                                    Button {
+                                        onArchive?(item)
+                                    } label: {
+                                        Label("Archive", systemImage: "archivebox")
+                                    }
+                                    .tint(.orange)
                                 }
                             }
                         }

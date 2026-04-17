@@ -100,6 +100,10 @@ struct ItemDetailScreen: View {
                 gapSection
             }
 
+            if !isEditing {
+                masterySection
+            }
+
             Section("Details") {
                 LabeledContent("Status") {
                     StatusBadge(status: item.status)
@@ -201,6 +205,59 @@ struct ItemDetailScreen: View {
             RecallSessionScreen(items: [item])
         }
         .onAppear(perform: syncDrafts)
+    }
+
+    private var masteryInfo: SchedulingEngine.MasteryInfo {
+        let records = (item.reviews ?? []).map {
+            ReviewRecord(reviewedAt: $0.reviewedAt, rating: $0.rating)
+        }
+        return SchedulingEngine.masteryInfo(after: records, cadence: AppSettings.currentCadence)
+    }
+
+    @ViewBuilder
+    private var masterySection: some View {
+        let info = masteryInfo
+        Section {
+            VStack(alignment: .leading, spacing: DT.Spacing.sm) {
+                Gauge(value: info.progress) { EmptyView() }
+                    .gaugeStyle(.linearCapacity)
+                    .tint(masteryTint(for: info.progress))
+
+                HStack(alignment: .firstTextBaseline) {
+                    Text(masteryDescription(for: info))
+                        .font(DT.Typography.caption)
+                        .foregroundStyle(DT.Color.textSecondary)
+                    Spacer()
+                    Text(info.progress >= 1.0
+                         ? "Mastered"
+                         : "\(Int(info.progress * 100))%")
+                        .font(DT.Typography.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(masteryTint(for: info.progress))
+                }
+            }
+            .padding(.vertical, DT.Spacing.xs)
+        } header: {
+            Text("Mastery Progress")
+        }
+    }
+
+    private func masteryTint(for progress: Double) -> Color {
+        switch progress {
+        case 0:       return DT.Color.textTertiary
+        case ..<0.75: return DT.Color.accent
+        default:      return DT.Color.success
+        }
+    }
+
+    private func masteryDescription(for info: SchedulingEngine.MasteryInfo) -> String {
+        if info.currentInterval == 0 {
+            return "Start reviewing to build mastery"
+        } else if info.progress >= 1.0 {
+            return "This card has reached mastery"
+        } else {
+            return "Interval: \(info.currentInterval)d · Mastery at \(info.threshold)d"
+        }
     }
 
     @ViewBuilder

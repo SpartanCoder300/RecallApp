@@ -41,6 +41,30 @@ enum SchedulingEngine {
         return sorted.last!.reviewedAt.addingTimeInterval(intervalSeconds)
     }
 
+    struct MasteryInfo {
+        /// SM-2 interval after the most recent review, in days.
+        let currentInterval: Int
+        /// Interval at which the item is considered mastered for the given cadence.
+        let threshold: Int
+        /// Progress toward mastery, clamped to 0.0–1.0.
+        var progress: Double { min(1.0, Double(currentInterval) / Double(threshold)) }
+        var isMastered: Bool { currentInterval >= threshold }
+    }
+
+    /// Returns mastery progress info for display — interval, threshold, and progress fraction.
+    static func masteryInfo(
+        after records: [ReviewRecord],
+        cadence: ReviewCadence = .standard
+    ) -> MasteryInfo {
+        let threshold = masteryThreshold(for: cadence)
+        guard !records.isEmpty else {
+            return MasteryInfo(currentInterval: 0, threshold: threshold)
+        }
+        let sorted = records.sorted { $0.reviewedAt < $1.reviewedAt }
+        let state = computeState(from: sorted, cadence: cadence)
+        return MasteryInfo(currentInterval: state.interval, threshold: threshold)
+    }
+
     /// Returns whether an item's SM-2 interval has reached the mastery threshold for the given cadence.
     ///
     /// Thresholds: Standard → 21 days, Relaxed → 28 days, Intensive → 14 days.

@@ -12,6 +12,7 @@ final class RecallItem {
     /// The answer shown after reveal. May be user-written or AI-generated.
     var answer: String?
     var createdAt: Date = Date()
+    var isArchived: Bool = false
 
     // .cascade is not supported by CloudKit — SwiftData converts it to .nullify on remote.
     // Deleting a RecallItem must also explicitly delete its reviews in application code.
@@ -47,6 +48,7 @@ final class RecallItem {
 
     /// Whether the item should appear in the current review queue.
     var isDue: Bool {
+        guard !isArchived else { return false }
         switch status {
         case .new, .due: return true
         case .upcoming, .mastered: return false

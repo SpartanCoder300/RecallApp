@@ -1,6 +1,8 @@
 import SwiftUI
+import SwiftData
 
 struct CollectionDetailScreen: View {
+    @Environment(\.modelContext) private var modelContext
     let collection: RecallCollection
 
     @State private var showingSession = false
@@ -56,6 +58,19 @@ struct CollectionDetailScreen: View {
                         ItemDetailScreen(item: item)
                     } label: {
                         CollectionItemRow(item: item)
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button {
+                            item.isArchived.toggle()
+                            try? modelContext.save()
+                            HapticManager.light()
+                        } label: {
+                            Label(
+                                item.isArchived ? "Unarchive" : "Archive",
+                                systemImage: item.isArchived ? "archivebox.circle" : "archivebox"
+                            )
+                        }
+                        .tint(item.isArchived ? .green : .orange)
                     }
                 }
             } header: {

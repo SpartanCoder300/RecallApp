@@ -49,7 +49,7 @@ struct StatusBadge: View {
     private var badgeColor: Color {
         switch status {
         case .new:      return DT.Color.accent
-        case .due:      return DT.Color.accent
+        case .due:      return DT.Color.caution
         case .upcoming: return DT.Color.textSecondary
         case .mastered: return DT.Color.success
         }
