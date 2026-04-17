@@ -99,6 +99,19 @@ enum PreviewService {
         return [todayNew, todayDue, olderDue, mastered]
     }()
 
+    static let sampleCollections: [RecallCollection] = {
+        let iot = RecallCollection(name: "IoT Interview Prep", color: .teal)
+        let sysdesign = RecallCollection(name: "System Design", color: .indigo)
+        let neuro = RecallCollection(name: "Neuroscience", color: .purple)
+        let empty = RecallCollection(name: "Algorithms", color: .orange)
+
+        iot.items = Array(sampleItems.prefix(2))
+        sysdesign.items = Array(sampleItems.suffix(2))
+        neuro.items = [sampleItems[0]]
+
+        return [iot, sysdesign, neuro, empty]
+    }()
+
     private static let sampleReviews: [Review] = {
         sampleItems.flatMap { $0.reviews ?? [] }
     }()

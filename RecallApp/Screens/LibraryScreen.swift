@@ -207,9 +207,16 @@ private struct LibraryRow: View {
                     .foregroundStyle(DT.Color.textPrimary)
                     .lineLimit(2)
 
-                Text(item.createdAt.formatted(date: .abbreviated, time: .omitted))
-                    .font(DT.Typography.footnote)
-                    .foregroundStyle(DT.Color.textSecondary)
+                HStack(spacing: DT.Spacing.xs) {
+                    if let collection = item.collection {
+                        Image(systemName: "circle.fill")
+                            .font(.system(size: 6))
+                            .foregroundStyle(collection.color.color)
+                    }
+                    Text(item.createdAt.formatted(date: .abbreviated, time: .omitted))
+                        .font(DT.Typography.footnote)
+                        .foregroundStyle(DT.Color.textSecondary)
+                }
             }
 
             Spacer(minLength: DT.Spacing.sm)

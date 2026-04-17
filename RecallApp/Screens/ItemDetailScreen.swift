@@ -100,6 +100,24 @@ struct ItemDetailScreen: View {
                     StatusBadge(status: item.status)
                 }
 
+                NavigationLink {
+                    CollectionPickerView(item: item)
+                } label: {
+                    LabeledContent("Collection") {
+                        HStack(spacing: DT.Spacing.xs) {
+                            if let col = item.collection {
+                                Image(systemName: "circle.fill")
+                                    .font(.system(size: 8))
+                                    .foregroundStyle(col.color.color)
+                            }
+                            Text(item.collection?.name ?? "None")
+                                .foregroundStyle(item.collection.map { $0.color.color } ?? Color.secondary)
+                        }
+                    }
+                }
+                .accessibilityLabel("Collection: \(item.collection?.name ?? "None")")
+                .accessibilityHint("Opens collection picker")
+
                 LabeledContent("Added") {
                     Text(item.createdAt.formatted(date: .abbreviated, time: .shortened))
                         .foregroundStyle(.secondary)

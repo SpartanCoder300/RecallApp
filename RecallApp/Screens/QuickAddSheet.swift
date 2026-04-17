@@ -5,9 +5,12 @@ struct QuickAddSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
+    @Query(sort: \RecallCollection.name) private var allCollections: [RecallCollection]
+
     @State private var term = ""
     @State private var answer = ""
     @State private var note = ""
+    @State private var selectedCollection: RecallCollection? = nil
     @State private var showingHint = false
     @State private var saveErrorMessage = ""
     @State private var showingSaveError = false
@@ -76,6 +79,19 @@ struct QuickAddSheet: View {
                         .accessibilityHint("Shows an optional hint field displayed during sessions")
                     }
                 }
+
+                if !allCollections.isEmpty {
+                    Section {
+                        Picker("Collection", selection: $selectedCollection) {
+                            Text("None").tag(Optional<RecallCollection>.none)
+                            ForEach(allCollections) { collection in
+                                Text(collection.name).tag(Optional(collection))
+                            }
+                        }
+                        .accessibilityLabel("Collection")
+                        .accessibilityHint("Assigns this card to a study collection")
+                    }
+                }
             }
             .navigationTitle("New Card")
             .navigationBarTitleDisplayMode(.inline)
@@ -121,6 +137,7 @@ struct QuickAddSheet: View {
         }
 
         let item = RecallItem(term: trimmedTerm, note: savedNote, answer: savedAnswer)
+        item.collection = selectedCollection
 
         do {
             try modelContext.transaction {
@@ -143,4 +160,8 @@ struct QuickAddSheet: View {
         .sheet(isPresented: .constant(true)) {
             QuickAddSheet(onSavePreview: { _, _, _ in })
         }
+        .modelContainer(
+            for: [RecallItem.self, Review.self, RecallCollection.self],
+            inMemory: true
+        )
 }

@@ -23,7 +23,7 @@ struct ContentView: View {
                 .tabItem { Label("Library", systemImage: "books.vertical.fill") }
                 .tag(AppTab.library)
 
-            CollectionsPlaceholder()
+            CollectionsScreen()
                 .tabItem { Label("Collections", systemImage: "square.stack.fill") }
                 .tag(AppTab.collections)
 
@@ -50,7 +50,7 @@ private struct PreviewContentView: View {
             }
             .tabItem { Label("Library", systemImage: "books.vertical.fill") }
 
-            CollectionsPlaceholder()
+            CollectionsPreview(collections: PreviewService.sampleCollections)
                 .tabItem { Label("Collections", systemImage: "square.stack.fill") }
 
             SettingsScreen()

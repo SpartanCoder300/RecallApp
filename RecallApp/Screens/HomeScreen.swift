@@ -275,9 +275,16 @@ private struct TodayItemRow: View {
                     .foregroundStyle(DT.Color.textPrimary)
                     .lineLimit(1)
 
-                Text(item.createdAt, style: .time)
-                    .font(DT.Typography.caption)
-                    .foregroundStyle(DT.Color.textTertiary)
+                HStack(spacing: DT.Spacing.xs) {
+                    if let collection = item.collection {
+                        Image(systemName: "circle.fill")
+                            .font(.system(size: 6))
+                            .foregroundStyle(collection.color.color)
+                    }
+                    Text(item.createdAt, style: .time)
+                        .font(DT.Typography.caption)
+                        .foregroundStyle(DT.Color.textTertiary)
+                }
             }
 
             Spacer()
